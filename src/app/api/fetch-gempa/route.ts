@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,16 @@ interface BmkgAutogempaResponse {
   };
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const isVercelCron = request.headers.has("x-vercel-cron");
+  const authHeader = request.headers.get("authorization");
+  const cronSecret = process.env.CRON_SECRET;
+
+  const hasValidBearer = authHeader === `Bearer ${cronSecret}`;
+  if (!isVercelCron && authHeader && !hasValidBearer) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   let bmkgResponse: Response;
   try {
     bmkgResponse = await fetch(BMKG_AUTOGEMPA_URL, { cache: "no-store" });
