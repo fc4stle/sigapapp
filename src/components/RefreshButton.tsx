@@ -12,8 +12,11 @@ export default function RefreshButton() {
     setLoading(true);
     setMessage("");
     try {
-      const res = await fetch("/api/fetch-gempa");
-      if (!res.ok) {
+      const results = await Promise.all([
+        fetch("/api/fetch-gempa"),
+        fetch("/api/fetch-kualitas-udara"),
+      ]);
+      if (results.some((res) => !res.ok)) {
         setMessage("Gagal refresh data");
       } else {
         setMessage("Data berhasil diperbarui");

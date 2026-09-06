@@ -3,6 +3,10 @@
     {
       "path": "/api/fetch-gempa",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/fetch-kualitas-udara",
+      "schedule": "0 0 * * *"
     }
   ]
 }
