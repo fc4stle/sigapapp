@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { sendTelegramMessage } from "@/lib/telegram-notify";
 
 export const dynamic = "force-dynamic";
 
@@ -7,6 +8,12 @@ const OPENAQ_BASE_URL = "https://api.openaq.org/v3";
 const YOGYAKARTA_COORDINATES = "-7.7956,110.3695";
 const SEARCH_RADIUS_METERS = 25000;
 const LOCATION_LIMIT = 10;
+const SIGAP_URL = "https://sigapapp.vercel.app";
+
+function isPm25OrPm10(parameter: string): boolean {
+  const normalized = parameter.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return normalized === "pm25" || normalized === "pm10";
+}
 
 interface OpenAqParameter {
   id: number;
@@ -57,6 +64,16 @@ interface KualitasUdaraRow {
   lintang: number;
   bujur: number;
   waktu: string;
+}
+
+interface KualitasUdaraUpsertedRow extends KualitasUdaraRow {
+  id: string;
+  notified_at: string | null;
+}
+
+interface KualitasUdaraSubscriber {
+  telegram_chat_id: string;
+  ambang_aqi: number;
 }
 
 export async function GET(request: NextRequest) {
@@ -165,10 +182,65 @@ export async function GET(request: NextRequest) {
   const { data, error } = await supabase
     .from("kualitas_udara")
     .upsert(rows, { onConflict: "location_id,parameter" })
-    .select();
+    .select()
+    .returns<KualitasUdaraUpsertedRow[]>();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  const unnotifiedRows = (data ?? []).filter(
+    (row) => !row.notified_at && isPm25OrPm10(row.parameter)
+  );
+
+  console.log("[fetch-kualitas-udara] unnotifiedRows:", JSON.stringify(unnotifiedRows));
+
+  if (unnotifiedRows.length > 0) {
+    const { data: subscribers, error: subscriberError } = await supabase
+      .from("subscriber")
+      .select("telegram_chat_id, ambang_aqi")
+      .eq("aktif", true)
+      .returns<KualitasUdaraSubscriber[]>();
+
+    console.log("[fetch-kualitas-udara] subscriberError:", subscriberError);
+    console.log("[fetch-kualitas-udara] subscribers:", JSON.stringify(subscribers));
+
+    if (subscriberError) {
+      console.error("Gagal mengambil subscriber:", subscriberError.message);
+    } else {
+      for (const row of unnotifiedRows) {
+        for (const subscriber of subscribers ?? []) {
+          console.log(`[fetch-kualitas-udara] cek ${subscriber.telegram_chat_id}: value=${row.value} >= ambang=${subscriber.ambang_aqi}? ${row.value >= subscriber.ambang_aqi}`);
+          if (row.value >= subscriber.ambang_aqi) {
+            const sent = await sendTelegramMessage(
+              subscriber.telegram_chat_id,
+              `🌫️ <b>Peringatan Kualitas Udara!</b>\n\nLokasi: ${row.location_name}\nParameter: ${row.parameter}\nValue: ${row.value} ${row.unit}\nWaktu: ${row.waktu}\n\n🔗 ${SIGAP_URL}`
+            );
+            console.log(`[fetch-kualitas-udara] kirim ke ${subscriber.telegram_chat_id}: ${sent ? "SUKSES" : "GAGAL"}`);
+          }
+        }
+      }
+
+      console.log("[fetch-kualitas-udara] update notified_at untuk ids:", unnotifiedRows.map(r => r.id));
+      const { error: notifiedError } = await supabase
+        .from("kualitas_udara")
+        .update({ notified_at: new Date().toISOString() })
+        .in(
+          "id",
+          unnotifiedRows.map((row) => row.id)
+        );
+
+      if (notifiedError) {
+        console.error(
+          "Gagal memperbarui notified_at pada kualitas_udara:",
+          notifiedError.message
+        );
+      } else {
+        console.log("[fetch-kualitas-udara] notified_at BERHASIL di-update");
+      }
+    }
+  } else {
+    console.log("[fetch-kualitas-udara] SKIP notifikasi — semua data sudah pernah di-notifikasi atau tidak ada PM2.5/PM10");
   }
 
   return NextResponse.json({ data });
