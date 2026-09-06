@@ -79,6 +79,7 @@ export default async function Home() {
             {kualitasUdaraList.map((item, index) => {
               const value = Number(item.value).toFixed(1);
               const waktu = new Date(item.waktu);
+              // eslint-disable-next-line react-hooks/purity
               const isOld = Date.now() - waktu.getTime() > 24 * 60 * 60 * 1000;
               return (
                 <li
