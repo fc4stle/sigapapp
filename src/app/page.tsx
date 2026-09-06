@@ -1,4 +1,5 @@
 import { createSupabaseAnonClient } from "@/lib/supabase-anon";
+import PetaGempaWrapper from "@/components/PetaGempaWrapper";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,10 @@ export default async function Home() {
         <h1 className="text-3xl font-semibold tracking-tight text-black dark:text-zinc-50">
           Data Gempa Terkini
         </h1>
+
+        <div className="h-[500px] w-full overflow-hidden rounded-lg border border-black/[.08] dark:border-white/[.145]">
+          <PetaGempaWrapper />
+        </div>
 
         {error ? (
           <p className="text-red-600 dark:text-red-400">
