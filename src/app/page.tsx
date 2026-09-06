@@ -76,22 +76,32 @@ export default async function Home() {
           </p>
         ) : (
           <ul className="flex flex-col gap-4">
-            {kualitasUdaraList.map((item, index) => (
-              <li
-                key={index}
-                className="rounded-lg border border-black/[.08] p-4 dark:border-white/[.145]"
-              >
-                <p className="text-xl font-semibold text-black dark:text-zinc-50">
-                  {item.parameter}: {item.value} {item.unit}
-                </p>
-                <p className="text-zinc-700 dark:text-zinc-300">
-                  {item.location_name}
-                </p>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                  {new Date(item.waktu).toLocaleString("id-ID")}
-                </p>
-              </li>
-            ))}
+            {kualitasUdaraList.map((item, index) => {
+              const value = Number(item.value).toFixed(1);
+              const waktu = new Date(item.waktu);
+              const isOld = Date.now() - waktu.getTime() > 24 * 60 * 60 * 1000;
+              return (
+                <li
+                  key={index}
+                  className="rounded-lg border border-black/[.08] p-4 dark:border-white/[.145]"
+                >
+                  <p className="text-xl font-semibold text-black dark:text-zinc-50">
+                    {item.parameter}: {value} {item.unit}
+                  </p>
+                  <p className="text-zinc-700 dark:text-zinc-300">
+                    {item.location_name}
+                  </p>
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                    {waktu.toLocaleString("id-ID")}
+                  </p>
+                  {isOld && (
+                    <p className="mt-1 text-xs font-medium text-amber-600 dark:text-amber-400">
+                      Data mungkin sudah tidak terkini
+                    </p>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </main>
