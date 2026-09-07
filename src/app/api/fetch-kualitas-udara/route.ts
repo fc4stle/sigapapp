@@ -6,7 +6,7 @@ const OPENAQ_BASE_URL = "https://api.openaq.org/v3";
 const SEARCH_RADIUS_METERS = 25000;
 const LOCATION_LIMIT = 10;
 const YOGYAKARTA_COORDINATES = "-7.7956,110.3695";
-const SIGAP_URL = "https://sigapapp.vercel.app";
+const SIGAP_URL = "https://www.sigapindonesia.web.id";
 
 // Sentinel values yang menandakan data tidak valid dari berbagai sistem sensor
 const SENTINEL_THRESHOLD = -900;

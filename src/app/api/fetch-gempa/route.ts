@@ -5,7 +5,7 @@ import { sendTelegramMessage } from "@/lib/telegram-notify";
 export const dynamic = "force-dynamic";
 
 const BMKG_AUTOGEMPA_URL = "https://data.bmkg.go.id/DataMKG/TEWS/autogempa.json";
-const SIGAP_URL = "https://sigapapp.vercel.app";
+const SIGAP_URL = "https://www.sigapindonesia.web.id";
 
 interface BmkgGempa {
   Tanggal: string;

@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
   const encodedWilayah = encodeURIComponent(text);
   await sendTelegramMessage(
     chatId,
-    `Wilayah pemantauan Anda telah diperbarui ke "<b>${text}</b>". Anda akan menerima notifikasi gempa (M ≥ 5.0) dan kualitas udara (AQI ≥ 150) untuk wilayah ini.\n\n🔗 <a href="https://sigapapp.vercel.app/?wilayah=${encodedWilayah}">Lihat data lengkap untuk ${text}</a>`
+    `Wilayah pemantauan Anda telah diperbarui ke "<b>${text}</b>". Anda akan menerima notifikasi gempa (M ≥ 5.0) dan kualitas udara (AQI ≥ 150) untuk wilayah ini.\n\n🔗 <a href="https://www.sigapindonesia.web.id/?wilayah=${encodedWilayah}">Lihat data lengkap untuk ${text}</a>`
   );
 
   return NextResponse.json({ ok: true });
