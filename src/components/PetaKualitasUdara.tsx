@@ -10,6 +10,7 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { createSupabaseAnonClient } from "@/lib/supabase-anon";
+import AccessibleAirQualityMarkers from "./AccessibleAirQualityMarkers";
 
 interface KualitasUdaraItem {
   location_name: string;
@@ -278,6 +279,7 @@ export default function PetaKualitasUdara({
           );
         })}
       </MapContainer>
+      <AccessibleAirQualityMarkers dataList={dataList} />
 
       {dataList.length > 0 && <Legend />}
 

@@ -10,6 +10,7 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { createSupabaseAnonClient } from "@/lib/supabase-anon";
+import AccessibleMarkers from "./AccessibleMarkers";
 
 interface Gempa {
   magnitude: number;
@@ -142,47 +143,50 @@ export default function PetaGempa({
   }, []);
 
   return (
-    <div role="application" aria-label="Peta lokasi gempa bumi terkini" className="h-full w-full">
-      <MapContainer
-        center={YOGYAKARTA_CENTER}
-        zoom={hasCustomCenter ? WILAYAH_ZOOM : 8}
-        scrollWheelZoom={true}
-        className="h-full w-full"
-      >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      <div
-        className="absolute inset-0 pointer-events-none grid-map-bg"
-        style={{ zIndex: 400 }}
-      />
-      <FitAllGempa gempaList={gempaList} />
-      <RippleMarkers gempaList={gempaList} />
-      {gempaList.map((gempa, index) => (
-        <CircleMarker
-          key={index}
-          center={[gempa.lintang, gempa.bujur]}
-          radius={gempa.magnitude * 2}
-          pathOptions={{
-            color: getMarkerColor(gempa.magnitude),
-            fillColor: getMarkerColor(gempa.magnitude),
-            fillOpacity: 0.7,
-          }}
+    <div className="h-full w-full">
+      <div role="application" aria-label="Peta lokasi gempa bumi terkini" className="h-full w-full">
+        <MapContainer
+          center={YOGYAKARTA_CENTER}
+          zoom={hasCustomCenter ? WILAYAH_ZOOM : 8}
+          scrollWheelZoom={true}
+          className="h-full w-full"
         >
-          <Popup>
-            <div className="flex flex-col gap-1">
-              <p>Magnitude: {gempa.magnitude}</p>
-              <p>Kedalaman: {gempa.kedalaman}</p>
-              <p>Wilayah: {gempa.wilayah}</p>
-              <p>
-                Waktu: {gempa.tanggal}, {gempa.jam}
-              </p>
-            </div>
-          </Popup>
-        </CircleMarker>
-      ))}
-    </MapContainer>
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          <div
+            className="absolute inset-0 pointer-events-none grid-map-bg"
+            style={{ zIndex: 400 }}
+          />
+          <FitAllGempa gempaList={gempaList} />
+          <RippleMarkers gempaList={gempaList} />
+          {gempaList.map((gempa, index) => (
+            <CircleMarker
+              key={index}
+              center={[gempa.lintang, gempa.bujur]}
+              radius={gempa.magnitude * 2}
+              pathOptions={{
+                color: getMarkerColor(gempa.magnitude),
+                fillColor: getMarkerColor(gempa.magnitude),
+                fillOpacity: 0.7,
+              }}
+            >
+              <Popup>
+                <div className="flex flex-col gap-1">
+                  <p>Magnitude: {gempa.magnitude}</p>
+                  <p>Kedalaman: {gempa.kedalaman}</p>
+                  <p>Wilayah: {gempa.wilayah}</p>
+                  <p>
+                    Waktu: {gempa.tanggal}, {gempa.jam}
+                  </p>
+                </div>
+              </Popup>
+            </CircleMarker>
+          ))}
+        </MapContainer>
+      </div>
+      <AccessibleMarkers gempaList={gempaList} />
     </div>
   );
 }
