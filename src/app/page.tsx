@@ -211,8 +211,12 @@ export default async function Home({
     <div className="flex flex-1 flex-col items-center bg-background text-foreground">
       <div className="flex w-full max-w-3xl items-center justify-between px-6 pt-4">
         <div className="flex items-center gap-2">
-          <span className="pulse-dot" />
-          <span style={{ fontSize: "12px", color: "#8A7A58" }}>
+          <span className="pulse-dot" aria-hidden="true" />
+          <span
+            style={{ fontSize: "12px", color: "#8A7A58" }}
+            aria-live="polite"
+            aria-atomic="true"
+          >
             Memantau langsung
           </span>
         </div>
@@ -239,7 +243,7 @@ export default async function Home({
         />
       </svg>
 
-      <main className="flex w-full max-w-3xl flex-col gap-10 px-6 py-16">
+      <main id="main-content" className="flex w-full max-w-3xl flex-col gap-10 px-6 py-16">
         <header className="flex flex-col gap-1">
           <h1 className="text-2xl font-semibold tracking-tight">
             Sigap {namaWilayah}

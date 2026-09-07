@@ -41,6 +41,7 @@ export default function RefreshButton() {
       <button
         onClick={handleRefresh}
         disabled={loading}
+        aria-label="Perbarui data gempa dan kualitas udara"
         className={`rounded border border-accent px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/10 disabled:opacity-50 ${
           flashEffect ? "flash-effect" : ""
         }`}

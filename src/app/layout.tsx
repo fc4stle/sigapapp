@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
+import AccessibilityToggle from "@/components/AccessibilityToggle";
 
 const ibmPlexSans = IBM_Plex_Sans({
   variable: "--font-ibm-plex-sans",
@@ -25,7 +26,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="id"
       className={`${ibmPlexSans.variable} ${ibmPlexMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+      <a href="#main-content" className="skip-link">
+        Lewati ke konten utama
+      </a>
+      <body className="min-h-full flex flex-col font-sans">
+        <AccessibilityToggle />
+        {children}
+      </body>
     </html>
   );
 }

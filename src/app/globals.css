@@ -128,3 +128,118 @@ body {
     linear-gradient(90deg, rgba(34, 30, 23, 0.5) 1px, transparent 1px);
   background-size: 24px 24px;
 }
+
+/* ===== ACCESSIBILITY MODE ===== */
+.a11y-mode {
+  --font-size-base: 20px;
+  --font-size-lg: 1.5rem;
+  --font-size-xl: 1.75rem;
+  --font-size-2xl: 2rem;
+  --font-size-sm: 1rem;
+  --font-size-xs: 0.875rem;
+  --muted: #b8afa0;
+  --border: #4a4238;
+}
+
+.a11y-mode body {
+  font-size: var(--font-size-base);
+  line-height: 1.6;
+}
+
+.a11y-mode h1 {
+  font-size: var(--font-size-2xl);
+}
+
+.a11y-mode h2 {
+  font-size: var(--font-size-xl);
+}
+
+.a11y-mode p,
+.a11y-mode li,
+.a11y-mode label,
+.a11y-mode input,
+.a11y-mode button {
+  font-size: var(--font-size-base);
+}
+
+.a11y-mode .text-sm {
+  font-size: var(--font-size-sm) !important;
+}
+
+.a11y-mode .text-xs {
+  font-size: var(--font-size-xs) !important;
+}
+
+.a11y-mode .text-lg {
+  font-size: var(--font-size-lg) !important;
+}
+
+.a11y-mode .text-2xl {
+  font-size: var(--font-size-2xl) !important;
+}
+
+.a11y-mode .text-muted {
+  color: var(--muted) !important;
+}
+
+.a11y-mode button,
+.a11y-mode [role="button"],
+.a11y-mode input,
+.a11y-mode a {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.a11y-mode .leaflet-control-zoom a {
+  width: 44px !important;
+  height: 44px !important;
+  line-height: 44px !important;
+  font-size: 20px !important;
+}
+
+/* Skip link */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  padding: 12px 24px;
+  background: var(--accent);
+  color: var(--background);
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 0 0 8px 8px;
+  transition: top 0.2s;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Focus styles */
+.a11y-mode *:focus {
+  outline: 3px solid var(--accent) !important;
+  outline-offset: 2px !important;
+}
+
+.a11y-mode *:focus:not(:focus-visible) {
+  outline: none !important;
+}
+
+.a11y-mode *:focus-visible {
+  outline: 3px solid var(--accent) !important;
+  outline-offset: 2px !important;
+}

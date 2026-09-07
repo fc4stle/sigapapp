@@ -206,7 +206,7 @@ export default function PetaKualitasUdara({
   }, [hasCustomCenter, center]);
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full" role="application" aria-label="Peta lokasi kualitas udara">
       {loading && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80">
           <div className="flex flex-col items-center gap-2">

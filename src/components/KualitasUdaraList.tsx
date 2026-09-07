@@ -61,10 +61,22 @@ function Gauge({ item }: { item: KualitasUdaraItem }) {
   const progress = Math.min(Number(item.value) / SCALE_MAX, 1);
   const dashoffset = CIRCUMFERENCE * (1 - progress);
   const color = getGaugeColor(Number(item.value));
+  const value = Number(item.value).toFixed(1);
+  const status =
+    Number(item.value) < 35
+      ? "baik"
+      : Number(item.value) <= 55
+        ? "sedang"
+        : "tidak sehat";
 
   return (
     <div className="flex flex-col items-center gap-1">
-      <svg viewBox="0 0 100 100" className="w-[78px]">
+      <svg
+        viewBox="0 0 100 100"
+        className="w-[78px]"
+        role="img"
+        aria-label={`${item.parameter}: ${value} ${item.unit}, kategori ${status}`}
+      >
         <circle cx="50" cy="50" r={RADIUS} stroke="#221F19" strokeWidth={7} fill="none" />
         <circle
           cx="50"
@@ -79,7 +91,7 @@ function Gauge({ item }: { item: KualitasUdaraItem }) {
           transform="rotate(-90 50 50)"
         />
         <text x="50" y="48" textAnchor="middle" fontFamily="var(--font-mono)" fontSize="16" fill="#EDE6D8">
-          {Number(item.value).toFixed(1)}
+          {value}
         </text>
         <text x="50" y="62" textAnchor="middle" fontSize="8" fill="#8B96A5">
           {item.unit}

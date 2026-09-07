@@ -142,12 +142,13 @@ export default function PetaGempa({
   }, []);
 
   return (
-    <MapContainer
-      center={YOGYAKARTA_CENTER}
-      zoom={hasCustomCenter ? WILAYAH_ZOOM : 8}
-      scrollWheelZoom={true}
-      className="h-full w-full"
-    >
+    <div role="application" aria-label="Peta lokasi gempa bumi terkini" className="h-full w-full">
+      <MapContainer
+        center={YOGYAKARTA_CENTER}
+        zoom={hasCustomCenter ? WILAYAH_ZOOM : 8}
+        scrollWheelZoom={true}
+        className="h-full w-full"
+      >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -182,5 +183,6 @@ export default function PetaGempa({
         </CircleMarker>
       ))}
     </MapContainer>
+    </div>
   );
 }
