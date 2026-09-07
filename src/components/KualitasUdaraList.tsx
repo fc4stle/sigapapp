@@ -97,7 +97,7 @@ function Gauge({ item }: { item: KualitasUdaraItem }) {
           {item.unit}
         </text>
       </svg>
-      <span style={{ fontSize: "10px", color: "#5A5548" }}>{item.parameter}</span>
+      <span style={{ fontSize: "12px", color: "#8A8270" }}>{item.parameter}</span>
     </div>
   );
 }

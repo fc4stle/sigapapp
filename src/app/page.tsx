@@ -209,24 +209,6 @@ export default async function Home({
 
   return (
     <div className="flex flex-1 flex-col items-center bg-background text-foreground">
-      <div className="flex w-full max-w-3xl items-center justify-between px-6 pt-4">
-        <div className="flex items-center gap-2">
-          <span className="pulse-dot" aria-hidden="true" />
-          <span
-            style={{ fontSize: "12px", color: "#8A7A58" }}
-            aria-live="polite"
-            aria-atomic="true"
-          >
-            Memantau langsung
-          </span>
-        </div>
-        {updatedText && (
-          <span style={{ color: "#5A5548" }} className="text-sm">
-            {updatedText}
-          </span>
-        )}
-      </div>
-
       <svg
         viewBox="0 0 400 48"
         className="h-12 w-full text-accent"
@@ -245,6 +227,23 @@ export default async function Home({
 
       <main id="main-content" className="flex w-full max-w-3xl flex-col gap-10 px-6 py-16">
         <header className="flex flex-col gap-1">
+          <div className="flex items-center justify-between pb-3">
+            <div className="flex items-center gap-2">
+              <span className="pulse-dot" aria-hidden="true" />
+              <span
+                style={{ fontSize: "12px", color: "#A89970" }}
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                Memantau langsung
+              </span>
+            </div>
+            {updatedText && (
+              <span style={{ color: "#8A8270" }} className="text-sm">
+                {updatedText}
+              </span>
+            )}
+          </div>
           <h1 className="text-2xl font-semibold tracking-tight">
             Sigap {namaWilayah}
           </h1>
