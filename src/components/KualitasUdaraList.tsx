@@ -3,6 +3,7 @@ interface KualitasUdaraItem {
   value: number;
   unit: string;
   parameter: string;
+  sumber: string;
 }
 
 interface Props {
@@ -28,29 +29,19 @@ function normalizeParameter(param: string): string {
 
 interface LocationData {
   location_name: string;
-  pm25?: KualitasUdaraItem;
-  pm10?: KualitasUdaraItem;
-  others: KualitasUdaraItem[];
+  items: KualitasUdaraItem[];
 }
 
 function groupByLocation(items: KualitasUdaraItem[]): LocationData[] {
   const map = new Map<string, LocationData>();
 
   for (const item of items) {
-    const normalized = normalizeParameter(item.parameter);
     const existing = map.get(item.location_name) ?? {
       location_name: item.location_name,
-      others: [],
+      items: [],
     };
 
-    if (normalized === "pm25") {
-      existing.pm25 = item;
-    } else if (normalized === "pm10") {
-      existing.pm10 = item;
-    } else {
-      existing.others.push(item);
-    }
-
+    existing.items.push(item);
     map.set(item.location_name, existing);
   }
 
@@ -109,25 +100,35 @@ function LocationBlock({ loc }: { loc: LocationData }) {
         {loc.location_name}
       </p>
 
-      {(loc.pm25 || loc.pm10) && (
+      {loc.items.length > 0 && (
         <div className="flex items-center justify-center gap-4 mb-3">
-          {loc.pm25 && <Gauge item={loc.pm25} />}
-          {loc.pm10 && <Gauge item={loc.pm10} />}
-        </div>
-      )}
-
-      {loc.others.length > 0 && (
-        <div className="flex flex-col gap-1 pt-2 border-t border-[#2A2620]">
-          {loc.others.map((other, i) => (
-            <div key={i} className="flex items-center justify-between">
-              <span style={{ fontSize: "11px", color: "#8B96A5" }}>{other.parameter}</span>
-              <span style={{ fontSize: "11px", color: "#B0A898", fontFamily: "var(--font-mono)" }}>
-                {Number(other.value).toFixed(1)} {other.unit}
-              </span>
-            </div>
+          {loc.items.map((item, i) => (
+            <Gauge key={i} item={item} />
           ))}
         </div>
       )}
+
+      <div className="flex flex-col gap-1 pt-2 border-t border-[#2A2620]">
+        {loc.items.map((item, i) => (
+          <div key={i} className="flex items-center justify-between">
+            <span style={{ fontSize: "11px", color: "#8B96A5" }}>{item.parameter}</span>
+            <div className="flex items-center gap-1">
+              <span style={{ fontSize: "11px", color: "#B0A898", fontFamily: "var(--font-mono)" }}>
+                {Number(item.value).toFixed(1)} {item.unit}
+              </span>
+              <span
+                className="text-[10px] px-1 rounded"
+                style={{
+                  background: item.sumber === "KLHK" ? "#1e3a5f" : "#3d2e1f",
+                  color: item.sumber === "KLHK" ? "#8ec5fc" : "#f5d78e",
+                }}
+              >
+                {item.sumber}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

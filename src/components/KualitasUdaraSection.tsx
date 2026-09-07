@@ -4,27 +4,26 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { capitalize } from "@/lib/format-wilayah";
 import KualitasUdaraList from "./KualitasUdaraList";
+import type { KualitasUdaraItem, SumberData } from "@/types/kualitas-udara";
 
 const PetaKualitasUdara = dynamic(() => import("./PetaKualitasUdara"), {
   ssr: false,
 });
 
-interface KualitasUdaraItem {
-  location_name: string;
-  parameter: string;
-  value: number;
-  unit: string;
-  lintang: number;
-  bujur: number;
-  waktu: string;
-}
-
-interface ApiData {
+interface ApiDataOpenAQ {
   data: KualitasUdaraItem[];
   koordinat: { lat: number; lon: number };
   total_sensor: number;
   distance_km: number | null;
   wilayah_terdekat: string | null;
+  pesan?: string;
+}
+
+interface ApiDataIspu {
+  data: KualitasUdaraItem[];
+  koordinat: { lat: number; lon: number } | null;
+  total_sensor: number;
+  ispu_active: boolean;
   pesan?: string;
 }
 
@@ -50,28 +49,49 @@ export default function KualitasUdaraSection({ center, wilayah }: Props) {
     setWilayahTerdekat(null);
 
     async function fetchData() {
-      // Kalau ada center custom (wilayah dari URL), pakai API dinamis
       if (hasCustomCenter && center) {
         try {
-          const res = await fetch(
-            `/api/kualitas-udara?lat=${center[0]}&lon=${center[1]}`
-          );
-          if (!res.ok) {
-            if (isMounted) {
-              setPesan("Gagal memuat data kualitas udara dari server");
-              setDataList([]);
-              setLoading(false);
-            }
-            return;
-          }
-          const json: ApiData = await res.json();
-          if (isMounted) {
-            const items: KualitasUdaraItem[] = json.data ?? [];
-            setDataList(items);
+          const [openAqRes, ispuRes] = await Promise.allSettled([
+            fetch(`/api/kualitas-udara?lat=${center[0]}&lon=${center[1]}`),
+            fetch(`/api/ispu?lat=${center[0]}&lon=${center[1]}`),
+          ]);
+
+          const allItems: KualitasUdaraItem[] = [];
+          const pesanParts: string[] = [];
+
+          if (openAqRes.status === "fulfilled" && openAqRes.value.ok) {
+            const json: ApiDataOpenAQ = await openAqRes.value.json();
+            const items: KualitasUdaraItem[] = (json.data ?? []).map((item) => ({
+              ...item,
+              sumber: item.sumber ?? ("OpenAQ" as SumberData),
+            }));
+            allItems.push(...items);
             setDistanceKm(json.distance_km ?? null);
             setWilayahTerdekat(json.wilayah_terdekat ?? null);
             if (items.length === 0 && json.pesan) {
-              setPesan(json.pesan);
+              pesanParts.push(`OpenAQ: ${json.pesan}`);
+            }
+          } else {
+            pesanParts.push("OpenAQ: gagal memuat data");
+          }
+
+          if (ispuRes.status === "fulfilled" && ispuRes.value.ok) {
+            const json: ApiDataIspu = await ispuRes.value.json();
+            if (json.data && json.data.length > 0) {
+              const items: KualitasUdaraItem[] = json.data.map((item) => ({
+                ...item,
+                sumber: "KLHK" as SumberData,
+              }));
+              allItems.push(...items);
+            } else if (json.pesan) {
+              pesanParts.push(`KLHK ISPU: ${json.pesan}`);
+            }
+          }
+
+          if (isMounted) {
+            setDataList(allItems);
+            if (allItems.length === 0 && pesanParts.length > 0) {
+              setPesan(pesanParts.join(". "));
             }
             setLoading(false);
           }
@@ -85,7 +105,6 @@ export default function KualitasUdaraSection({ center, wilayah }: Props) {
         return;
       }
 
-      // Default: fetch dari Supabase (data historis cron)
       try {
         const { createSupabaseAnonClient } = await import("@/lib/supabase-anon");
         const supabase = createSupabaseAnonClient();
@@ -99,7 +118,11 @@ export default function KualitasUdaraSection({ center, wilayah }: Props) {
             setPesan("Gagal memuat data kualitas udara");
             setDataList([]);
           } else {
-            setDataList(data ?? []);
+            const items: KualitasUdaraItem[] = (data ?? []).map((item) => ({
+              ...item,
+              sumber: "OpenAQ" as SumberData,
+            }));
+            setDataList(items);
           }
           setLoading(false);
         }
@@ -141,7 +164,7 @@ export default function KualitasUdaraSection({ center, wilayah }: Props) {
       </div>
 
       <div className="h-[500px] w-full overflow-hidden border border-border">
-        <PetaKualitasUdara center={center} />
+        <PetaKualitasUdara center={center} dataList={dataList} />
       </div>
 
       {loading && (

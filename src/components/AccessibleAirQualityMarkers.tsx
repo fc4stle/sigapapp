@@ -2,15 +2,7 @@
 
 import { useMap } from "react-leaflet";
 import { useEffect, useState } from "react";
-
-interface LocationData {
-  location_name: string;
-  lintang: number;
-  bujur: number;
-  pm25: { value: number; unit: string; parameter: string } | null;
-  pm10: { value: number; unit: string; parameter: string } | null;
-  others: { value: number; unit: string; parameter: string }[];
-}
+import type { KualitasUdaraItem, LocationData } from "@/types/kualitas-udara";
 
 interface Props {
   dataList: LocationData[];
@@ -39,8 +31,9 @@ export default function AccessibleAirQualityMarkers({ dataList }: Props) {
 
   function describeLocation(loc: LocationData): string {
     const parts = [`${loc.location_name}`];
-    if (loc.pm25) parts.push(`PM2.5: ${loc.pm25.value} ${loc.pm25.unit}`);
-    if (loc.pm10) parts.push(`PM10: ${loc.pm10.value} ${loc.pm10.unit}`);
+    for (const item of loc.items) {
+      parts.push(`${item.parameter}: ${item.value} ${item.unit} (${item.sumber})`);
+    }
     return parts.join(", ");
   }
 
