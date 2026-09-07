@@ -91,9 +91,10 @@ export async function POST(request: NextRequest) {
     console.error("Gagal memperbarui wilayah subscriber:", error.message);
   }
 
+  const encodedWilayah = encodeURIComponent(text);
   await sendTelegramMessage(
     chatId,
-    `Wilayah pemantauan Anda telah diperbarui ke "${text}". Anda akan menerima notifikasi gempa (M ≥ 5.0) dan kualitas udara (AQI ≥ 150) untuk wilayah ini.`
+    `Wilayah pemantauan Anda telah diperbarui ke "${text}". Anda akan menerima notifikasi gempa (M ≥ 5.0) dan kualitas udara (AQI ≥ 150) untuk wilayah ini.\n\nAnda bisa lihat data lengkap untuk wilayah Anda di: https://sigapapp.vercel.app/?wilayah=${encodedWilayah}`
   );
 
   return NextResponse.json({ ok: true });

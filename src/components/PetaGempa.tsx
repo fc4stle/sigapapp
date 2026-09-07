@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { createSupabaseAnonClient } from "@/lib/supabase-anon";
 
@@ -23,8 +23,76 @@ function getMarkerColor(magnitude: number): string {
   return "#eab308";
 }
 
-export default function PetaGempa() {
+function FitBounds({ gempaList }: { gempaList: Gempa[] }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (gempaList.length === 0) return;
+
+    const bounds = gempaList.map((g) => [g.lintang, g.bujur] as [number, number]);
+    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 10 });
+  }, [gempaList, map]);
+
+  return null;
+}
+
+const WILAYAH_ZOOM = 10;
+
+interface RipplePosition {
+  x: number;
+  y: number;
+  mag: number;
+  key: string;
+}
+
+function RippleMarkers({ gempaList }: { gempaList: Gempa[] }) {
+  const map = useMap();
+  const [positions, setPositions] = useState<RipplePosition[]>([]);
+
+  useEffect(() => {
+    const update = () => {
+      const pos = gempaList
+        .filter((g) => g.magnitude >= 5)
+        .map((g) => {
+          const point = map.latLngToContainerPoint([g.lintang, g.bujur]);
+          return {
+            x: point.x,
+            y: point.y,
+            mag: g.magnitude,
+            key: `${g.lintang}_${g.bujur}`,
+          };
+        });
+      setPositions(pos);
+    };
+    update();
+    map.on("move zoom", update);
+    return () => {
+      map.off("move zoom", update);
+    };
+  }, [gempaList, map]);
+
+  return (
+    <>
+      {positions.map((p) => (
+        <div
+          key={p.key}
+          className="absolute pointer-events-none"
+          style={{ left: p.x - 20, top: p.y - 20, width: 40, height: 40, zIndex: 650 }}
+        >
+          <div className="w-full h-full rounded-full border-2 border-red-500 ripple-anim" />
+        </div>
+      ))}
+    </>
+  );
+}
+
+export default function PetaGempa({
+  center,
+}: {
+  center?: [number, number];
+}) {
   const [gempaList, setGempaList] = useState<Gempa[]>([]);
+  const hasCustomCenter = center !== undefined;
 
   useEffect(() => {
     let isMounted = true;
@@ -50,8 +118,8 @@ export default function PetaGempa() {
 
   return (
     <MapContainer
-      center={YOGYAKARTA_CENTER}
-      zoom={8}
+      center={center ?? YOGYAKARTA_CENTER}
+      zoom={hasCustomCenter ? WILAYAH_ZOOM : 8}
       scrollWheelZoom={true}
       className="h-full w-full"
     >
@@ -59,6 +127,12 @@ export default function PetaGempa() {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+      <div
+        className="absolute inset-0 pointer-events-none grid-map-bg"
+        style={{ zIndex: 400 }}
+      />
+      {!hasCustomCenter && <FitBounds gempaList={gempaList} />}
+      <RippleMarkers gempaList={gempaList} />
       {gempaList.map((gempa, index) => (
         <CircleMarker
           key={index}

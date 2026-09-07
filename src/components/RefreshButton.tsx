@@ -6,7 +6,13 @@ import { useRouter } from "next/navigation";
 export default function RefreshButton() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [flashEffect, setFlashEffect] = useState(false);
   const router = useRouter();
+
+  function triggerFlash() {
+    setFlashEffect(true);
+    setTimeout(() => setFlashEffect(false), 1200);
+  }
 
   async function handleRefresh() {
     setLoading(true);
@@ -17,13 +23,14 @@ export default function RefreshButton() {
         fetch("/api/fetch-kualitas-udara"),
       ]);
       if (results.some((res) => !res.ok)) {
-        setMessage("Gagal refresh data");
+        setMessage("Gagal memperbarui data");
       } else {
         setMessage("Data berhasil diperbarui");
         router.refresh();
+        triggerFlash();
       }
     } catch {
-      setMessage("Gagal refresh data");
+      setMessage("Gagal memperbarui data");
     } finally {
       setLoading(false);
     }
@@ -34,13 +41,13 @@ export default function RefreshButton() {
       <button
         onClick={handleRefresh}
         disabled={loading}
-        className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-80 disabled:opacity-50 dark:bg-white dark:text-black"
+        className={`rounded border border-accent px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/10 disabled:opacity-50 ${
+          flashEffect ? "flash-effect" : ""
+        }`}
       >
-        {loading ? "Memuat..." : "Refresh Data"}
+        {loading ? "Memuat data" : "Perbarui data"}
       </button>
-      {message && (
-        <span className="text-sm text-zinc-600 dark:text-zinc-400">{message}</span>
-      )}
+      {message && <span className="text-sm text-muted">{message}</span>}
     </div>
   );
 }

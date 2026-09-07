@@ -1,110 +1,267 @@
 import { createSupabaseAnonClient } from "@/lib/supabase-anon";
+import { geocodeWilayah } from "@/lib/geocode";
 import PetaGempaWrapper from "@/components/PetaGempaWrapper";
-import PetaKualitasUdaraWrapper from "@/components/PetaKualitasUdaraWrapper";
+import KualitasUdaraSection from "@/components/KualitasUdaraSection";
 import RefreshButton from "@/components/RefreshButton";
+import PencarianWilayah from "@/components/PencarianWilayah";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home() {
+const YOGYAKARTA_CENTER: [number, number] = [-7.7956, 110.3695];
+
+const BULAN_INDEX: Record<string, number> = {
+  jan: 0,
+  feb: 1,
+  mar: 2,
+  apr: 3,
+  mei: 4,
+  may: 4,
+  jun: 5,
+  jul: 6,
+  ags: 7,
+  aug: 7,
+  sep: 8,
+  okt: 9,
+  oct: 9,
+  nov: 10,
+  des: 11,
+  dec: 11,
+};
+
+function parseGempaDateTime(tanggal: string, jam: string): Date | null {
+  const tanggalMatch = tanggal.trim().match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/);
+  if (!tanggalMatch) return null;
+  const [, hari, bulanRaw, tahun] = tanggalMatch;
+  const bulanIndex = BULAN_INDEX[bulanRaw.toLowerCase()];
+  if (bulanIndex === undefined) return null;
+
+  const jamMatch = jam.trim().match(/^(\d{2}):(\d{2}):(\d{2})/);
+  if (!jamMatch) return null;
+  const [, jj, mm, ss] = jamMatch;
+
+  return new Date(
+    Number(tahun),
+    bulanIndex,
+    Number(hari),
+    Number(jj),
+    Number(mm),
+    Number(ss),
+  );
+}
+
+function formatRelativeTime(diffMs: number): string {
+  const minutes = Math.max(0, Math.floor(diffMs / 60000));
+
+  if (minutes < 60) {
+    return `Diperbarui ${minutes} menit yang lalu`;
+  }
+
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) {
+    return `Diperbarui ${hours} jam yang lalu`;
+  }
+
+  const days = Math.round(hours / 24);
+  return `Diperbarui ${days} hari yang lalu`;
+}
+
+const BULAN: Record<string, string> = {
+  jan: "Januari",
+  feb: "Februari",
+  mar: "Maret",
+  apr: "April",
+  mei: "Mei",
+  may: "Mei",
+  jun: "Juni",
+  jul: "Juli",
+  ags: "Agustus",
+  aug: "Agustus",
+  sep: "September",
+  okt: "Oktober",
+  oct: "Oktober",
+  nov: "November",
+  des: "Desember",
+  dec: "Desember",
+};
+
+function formatTanggalGempa(tanggal: string): string {
+  const match = tanggal.trim().match(/^(\d{1,2})\s+([A-Za-z]+)\s+\d{4}$/);
+  if (!match) return tanggal;
+  const [, hari, bulanRaw] = match;
+  const bulan = BULAN[bulanRaw.toLowerCase()] ?? bulanRaw;
+  return `${Number(hari)} ${bulan}`;
+}
+
+function formatJamGempa(jam: string): string {
+  const match = jam.trim().match(/^(\d{2}):(\d{2}):\d{2}\s*(.*)$/);
+  if (!match) return jam;
+  const [, jamStr, menit, zona] = match;
+  return zona ? `${jamStr}.${menit} ${zona}` : `${jamStr}.${menit}`;
+}
+
+function formatWaktuUdara(waktu: string): string {
+  const date = new Date(waktu);
+  const tanggal = new Intl.DateTimeFormat("id-ID", {
+    day: "numeric",
+    month: "long",
+    timeZone: "Asia/Jakarta",
+  }).format(date);
+  const jam = new Intl.DateTimeFormat("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Jakarta",
+  }).format(date);
+  return `${tanggal} pukul ${jam} WIB`;
+}
+
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ wilayah?: string }>;
+}) {
+  const { wilayah } = await searchParams;
+
+  let namaWilayah = "Yogyakarta";
+  let pusatPeta = YOGYAKARTA_CENTER;
+  let pesanWilayah: string | null = null;
+
+  if (wilayah) {
+    const hasil = await geocodeWilayah(wilayah);
+    if (hasil) {
+      namaWilayah = wilayah;
+      pusatPeta = [hasil.lat, hasil.lon];
+    } else {
+      pesanWilayah = "Wilayah tidak ditemukan, menampilkan data Yogyakarta";
+    }
+  }
+
   const supabase = createSupabaseAnonClient();
   const { data: gempaList, error } = await supabase
     .from("gempa")
-    .select("magnitude, wilayah, tanggal, jam")
+    .select("magnitude, wilayah, tanggal, jam, kedalaman")
     .order("date_time", { ascending: false });
   const { data: kualitasUdaraList, error: kualitasUdaraError } = await supabase
     .from("kualitas_udara")
     .select("location_name, parameter, value, unit, waktu")
     .order("waktu", { ascending: false });
 
+  const isUdaraLama =
+    !!kualitasUdaraList?.[0] &&
+    // eslint-disable-next-line react-hooks/purity
+    Date.now() - new Date(kualitasUdaraList[0].waktu).getTime() >
+      24 * 60 * 60 * 1000;
+
+  const gempaTime = gempaList?.[0]
+    ? parseGempaDateTime(gempaList[0].tanggal, gempaList[0].jam)
+    : null;
+  const udaraTime = kualitasUdaraList?.[0]
+    ? new Date(kualitasUdaraList[0].waktu)
+    : null;
+  const latestTime =
+    gempaTime && udaraTime
+      ? gempaTime.getTime() > udaraTime.getTime()
+        ? gempaTime
+        : udaraTime
+      : (gempaTime ?? udaraTime);
+
+  const updatedText = latestTime
+    ? formatRelativeTime(Date.now() - latestTime.getTime())
+    : null;
+
+  const jumlahGempa = gempaList?.length ?? 0;
+  const jumlahTitikUdara = new Set(
+    (kualitasUdaraList ?? []).map((item) => item.location_name),
+  ).size;
+  const ringkasanText =
+    jumlahGempa === 0 && jumlahTitikUdara === 0
+      ? "Belum ada data hari ini"
+      : `${jumlahGempa} gempa dan ${jumlahTitikUdara} titik pantau udara hari ini`;
+
   return (
-    <div className="flex flex-col flex-1 items-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex w-full max-w-3xl flex-col gap-6 py-16 px-6">
-        <h1 className="text-3xl font-semibold tracking-tight text-black dark:text-zinc-50">
-          Data Gempa Terkini
-        </h1>
+    <div className="flex flex-1 flex-col items-center bg-background text-foreground">
+      <div className="flex w-full max-w-3xl items-center justify-between px-6 pt-4">
+        <div className="flex items-center gap-2">
+          <span className="pulse-dot" />
+          <span style={{ fontSize: "12px", color: "#8A7A58" }}>
+            Memantau langsung
+          </span>
+        </div>
+        {updatedText && (
+          <span style={{ color: "#5A5548" }} className="text-sm">
+            {updatedText}
+          </span>
+        )}
+      </div>
+
+      <svg
+        viewBox="0 0 400 48"
+        className="h-12 w-full text-accent"
+        fill="none"
+        aria-hidden="true"
+      >
+        <polyline
+          points="0,24 24,24 44,8 64,40 84,16 104,28 124,10 144,34 164,24 184,24 204,6 224,36 244,24 264,24 284,14 304,30 324,24 344,24 364,6 384,40 400,24"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="animate-waveform"
+        />
+      </svg>
+
+      <main className="flex w-full max-w-3xl flex-col gap-10 px-6 py-16">
+        <header className="flex flex-col gap-1">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Sigap {namaWilayah}
+          </h1>
+          <p className="text-muted">Pantau gempa dan udara di wilayahmu</p>
+          <p className="text-sm text-muted">{ringkasanText}</p>
+          {pesanWilayah && (
+            <p className="text-sm text-warning">{pesanWilayah}</p>
+          )}
+        </header>
+
+        <PencarianWilayah defaultValue={wilayah} />
 
         <RefreshButton />
 
-        <div className="h-[500px] w-full overflow-hidden rounded-lg border border-black/[.08] dark:border-white/[.145]">
-          <PetaGempaWrapper />
-        </div>
+        <section className="flex flex-col gap-4 border-b border-border pb-10">
+          <h2 className="text-lg font-semibold">Gempa terkini</h2>
 
-        {error ? (
-          <p className="text-red-600 dark:text-red-400">
-            Gagal memuat data gempa: {error.message}
-          </p>
-        ) : !gempaList || gempaList.length === 0 ? (
-          <p className="text-zinc-600 dark:text-zinc-400">
-            Belum ada data gempa
-          </p>
-        ) : (
-          <ul className="flex flex-col gap-4">
-            {gempaList.map((gempa, index) => (
-              <li
-                key={index}
-                className="rounded-lg border border-black/[.08] p-4 dark:border-white/[.145]"
-              >
-                <p className="text-xl font-semibold text-black dark:text-zinc-50">
-                  Magnitude {gempa.magnitude}
-                </p>
-                <p className="text-zinc-700 dark:text-zinc-300">
-                  {gempa.wilayah}
-                </p>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                  {gempa.tanggal}, {gempa.jam}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
+          <div className="h-[500px] w-full overflow-hidden border border-border">
+            <PetaGempaWrapper center={wilayah ? pusatPeta : undefined} />
+          </div>
 
-        <h1 className="text-3xl font-semibold tracking-tight text-black dark:text-zinc-50">
-          Data Kualitas Udara Terkini
-        </h1>
-
-        <div className="h-[500px] w-full overflow-hidden rounded-lg border border-black/[.08] dark:border-white/[.145]">
-          <PetaKualitasUdaraWrapper />
-        </div>
-
-        {kualitasUdaraError ? (
-          <p className="text-red-600 dark:text-red-400">
-            Gagal memuat data kualitas udara: {kualitasUdaraError.message}
-          </p>
-        ) : !kualitasUdaraList || kualitasUdaraList.length === 0 ? (
-          <p className="text-zinc-600 dark:text-zinc-400">
-            Belum ada data kualitas udara
-          </p>
-        ) : (
-          <ul className="flex flex-col gap-4">
-            {kualitasUdaraList.map((item, index) => {
-              const value = Number(item.value).toFixed(1);
-              const waktu = new Date(item.waktu);
-              // eslint-disable-next-line react-hooks/purity
-              const isOld = Date.now() - waktu.getTime() > 24 * 60 * 60 * 1000;
-              return (
+          {error ? (
+            <p className="text-red-400">
+              Gagal memuat data gempa: {error.message}
+            </p>
+          ) : !gempaList || gempaList.length === 0 ? (
+            <p className="text-muted">Belum ada data gempa</p>
+          ) : (
+            <ul className="flex flex-col">
+              {gempaList.map((gempa, index) => (
                 <li
                   key={index}
-                  className="rounded-lg border border-black/[.08] p-4 dark:border-white/[.145]"
+                  className="flex flex-col gap-1 border-b border-divider py-4 last:border-b-0"
                 >
-                  <p className="text-xl font-semibold text-black dark:text-zinc-50">
-                    {item.parameter}: {value} {item.unit}
+                  <p className="font-mono text-2xl text-accent">
+                    Magnitude {gempa.magnitude}
                   </p>
-                  <p className="text-zinc-700 dark:text-zinc-300">
-                    {item.location_name}
+                  <p>{gempa.wilayah}</p>
+                  <p className="text-sm text-muted">
+                    Kedalaman {gempa.kedalaman}, terjadi{" "}
+                    {formatTanggalGempa(gempa.tanggal)} pukul{" "}
+                    {formatJamGempa(gempa.jam)}
                   </p>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                    {waktu.toLocaleString("id-ID")}
-                  </p>
-                  {isOld && (
-                    <p className="mt-1 text-xs font-medium text-amber-600 dark:text-amber-400">
-                      Data mungkin sudah tidak terkini
-                    </p>
-                  )}
                 </li>
-              );
-            })}
-          </ul>
-        )}
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <KualitasUdaraSection center={wilayah ? pusatPeta : undefined} wilayah={wilayah} />
       </main>
     </div>
   );

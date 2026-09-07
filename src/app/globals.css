@@ -1,26 +1,130 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #14120d;
+  --foreground: #ede6d8;
+  --border: #2a2620;
+  --divider: #221f19;
+  --muted: #7a7364;
+  --warning: #8a6a2e;
+  --accent: #d99a3e;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-border: var(--border);
+  --color-divider: var(--divider);
+  --color-muted: var(--muted);
+  --color-warning: var(--warning);
+  --color-accent: var(--accent);
+  --font-sans: var(--font-ibm-plex-sans);
+  --font-mono: var(--font-ibm-plex-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+}
+
+.leaflet-container {
+  background: var(--background);
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--background);
+  color: var(--foreground);
+  box-shadow: none;
+  border: 1px solid var(--border);
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 4px;
+}
+
+.leaflet-control-attribution {
+  background: color-mix(in srgb, var(--background) 80%, transparent);
+  color: var(--muted);
+}
+
+.leaflet-control-attribution a {
+  color: var(--muted);
+}
+
+.leaflet-control-zoom a {
+  background: var(--background);
+  color: var(--foreground);
+  border-color: var(--border) !important;
+}
+
+@keyframes waveform-pulse {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-waveform {
+  animation: waveform-pulse 3s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0% {
+    box-shadow: 0 0 0 0 rgba(217, 154, 62, 0.6);
+  }
+  100% {
+    box-shadow: 0 0 0 12px rgba(217, 154, 62, 0);
+  }
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  background: #d99a3e;
+  border-radius: 50%;
+  animation: pulse-dot 2s infinite;
+}
+
+@keyframes flash-bg {
+  0% {
+    background: rgba(217, 154, 62, 0.18);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+.flash-effect {
+  animation: flash-bg 1.2s ease-out forwards;
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+.ripple-overlay {
+  animation: ripple 1.8s infinite;
+}
+
+.ripple-anim {
+  animation: ripple 1.8s ease-out infinite;
+  border-color: #ef4444;
+}
+
+.grid-map-bg {
+  background-image:
+    linear-gradient(rgba(34, 30, 23, 0.5) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 30, 23, 0.5) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
