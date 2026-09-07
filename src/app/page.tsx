@@ -4,10 +4,34 @@ import PetaGempaWrapper from "@/components/PetaGempaWrapper";
 import KualitasUdaraSection from "@/components/KualitasUdaraSection";
 import RefreshButton from "@/components/RefreshButton";
 import PencarianWilayah from "@/components/PencarianWilayah";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 
 const YOGYAKARTA_CENTER: [number, number] = [-7.7956, 110.3695];
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+}
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ wilayah?: string }>;
+}): Promise<Metadata> {
+  const { wilayah } = await searchParams;
+  if (wilayah) {
+    const nama = capitalize(wilayah);
+    return {
+      title: `Sigap ${nama}`,
+      description: `Pantau gempa dan udara di ${nama}`,
+    };
+  }
+  return {
+    title: "Sigap Yogyakarta",
+    description: "Pantau gempa dan udara di wilayahmu",
+  };
+}
 
 const BULAN_INDEX: Record<string, number> = {
   jan: 0,
