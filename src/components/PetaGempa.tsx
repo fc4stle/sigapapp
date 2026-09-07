@@ -22,7 +22,6 @@ interface Gempa {
 }
 
 const YOGYAKARTA_CENTER: [number, number] = [-7.7956, 110.3695];
-const FOCUS_ZOOM = 8;
 
 function getMarkerColor(magnitude: number): string {
   if (magnitude > 5) return "#ef4444";
@@ -30,16 +29,26 @@ function getMarkerColor(magnitude: number): string {
   return "#eab308";
 }
 
-function FocusCenter({ gempaList }: { gempaList: Gempa[] }) {
+function FitAllGempa({ gempaList }: { gempaList: Gempa[] }) {
   const map = useMap();
 
   useEffect(() => {
     if (gempaList.length === 0) return;
 
-    const latest = gempaList[0];
-    map.setView([latest.lintang, latest.bujur], FOCUS_ZOOM, {
-      animate: true,
-      duration: 1,
+    if (gempaList.length === 1) {
+      map.setView([gempaList[0].lintang, gempaList[0].bujur], 8, {
+        animate: true,
+        duration: 1,
+      });
+      return;
+    }
+
+    const bounds = gempaList.map(
+      (g) => [g.lintang, g.bujur] as [number, number]
+    );
+    // Delay fitBounds until after markers are rendered
+    requestAnimationFrame(() => {
+      map.fitBounds(bounds, { padding: [30, 30], maxZoom: 6 });
     });
   }, [gempaList, map]);
 
@@ -87,7 +96,13 @@ function RippleMarkers({ gempaList }: { gempaList: Gempa[] }) {
         <div
           key={p.key}
           className="absolute pointer-events-none"
-          style={{ left: p.x - 20, top: p.y - 20, width: 40, height: 40, zIndex: 650 }}
+          style={{
+            left: p.x - 20,
+            top: p.y - 20,
+            width: 40,
+            height: 40,
+            zIndex: 650,
+          }}
         >
           <div className="w-full h-full rounded-full border-2 border-red-500 ripple-anim" />
         </div>
@@ -128,7 +143,7 @@ export default function PetaGempa({
 
   return (
     <MapContainer
-      center={center ?? YOGYAKARTA_CENTER}
+      center={YOGYAKARTA_CENTER}
       zoom={hasCustomCenter ? WILAYAH_ZOOM : 8}
       scrollWheelZoom={true}
       className="h-full w-full"
@@ -141,7 +156,7 @@ export default function PetaGempa({
         className="absolute inset-0 pointer-events-none grid-map-bg"
         style={{ zIndex: 400 }}
       />
-      {!hasCustomCenter && <FocusCenter gempaList={gempaList} />}
+      <FitAllGempa gempaList={gempaList} />
       <RippleMarkers gempaList={gempaList} />
       {gempaList.map((gempa, index) => (
         <CircleMarker

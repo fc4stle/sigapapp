@@ -11,7 +11,7 @@ import {
 import "leaflet/dist/leaflet.css";
 import { createSupabaseAnonClient } from "@/lib/supabase-anon";
 
-interface KualitasUdara {
+interface KualitasUdaraItem {
   location_name: string;
   parameter: string;
   value: number;
@@ -21,52 +21,63 @@ interface KualitasUdara {
   waktu: string;
 }
 
+interface LocationData {
+  location_name: string;
+  lintang: number;
+  bujur: number;
+  pm25: KualitasUdaraItem | null;
+  pm10: KualitasUdaraItem | null;
+  others: KualitasUdaraItem[];
+}
+
 const YOGYAKARTA_CENTER: [number, number] = [-7.7956, 110.3695];
 
-function getMarkerColor(parameter: string, value: number): string {
-  const normalizedParameter = parameter.toLowerCase();
-
-  if (
-    normalizedParameter.includes("pm25") ||
-    normalizedParameter.includes("pm2.5")
-  ) {
-    if (value > 55) return "#ef4444";
-    if (value > 35) return "#f97316";
-    if (value > 12) return "#eab308";
-    return "#22c55e";
-  }
-
-  if (normalizedParameter.includes("pm10")) {
-    if (value > 150) return "#ef4444";
-    if (value > 100) return "#f97316";
-    if (value > 50) return "#eab308";
-    return "#22c55e";
-  }
-
-  return "#3b82f6";
+function getMarkerColor(value: number): string {
+  if (value > 55) return "#ef4444";
+  if (value > 35) return "#f97316";
+  if (value > 12) return "#eab308";
+  return "#22c55e";
 }
 
-function getMarkerLabel(parameter: string, value: number): string {
-  const normalizedParameter = parameter.toLowerCase();
-  if (
-    normalizedParameter.includes("pm25") ||
-    normalizedParameter.includes("pm2.5")
-  ) {
-    if (value > 55) return "Tidak sehat";
-    if (value > 35) return "Sedang";
-    if (value > 12) return "Baik";
-    return "Sangat baik";
-  }
-  if (normalizedParameter.includes("pm10")) {
-    if (value > 150) return "Tidak sehat";
-    if (value > 100) return "Sedang";
-    if (value > 50) return "Baik";
-    return "Sangat baik";
-  }
-  return "N/A";
+function getMarkerLabel(value: number): string {
+  if (value > 55) return "Bahaya";
+  if (value > 35) return "Tidak sehat";
+  if (value > 12) return "Sedang";
+  return "Baik";
 }
 
-function FocusCenter({ dataList }: { dataList: KualitasUdara[] }) {
+function groupByLocation(items: KualitasUdaraItem[]): LocationData[] {
+  const map = new Map<string, LocationData>();
+
+  for (const item of items) {
+    const key = `${item.lintang}_${item.bujur}`;
+    let loc = map.get(key);
+    if (!loc) {
+      loc = {
+        location_name: item.location_name,
+        lintang: item.lintang,
+        bujur: item.bujur,
+        pm25: null,
+        pm10: null,
+        others: [],
+      };
+      map.set(key, loc);
+    }
+
+    const param = item.parameter.toLowerCase();
+    if (param.includes("pm25") || param.includes("pm2.5")) {
+      loc.pm25 = item;
+    } else if (param.includes("pm10")) {
+      loc.pm10 = item;
+    } else {
+      loc.others.push(item);
+    }
+  }
+
+  return Array.from(map.values());
+}
+
+function FocusCenter({ dataList }: { dataList: LocationData[] }) {
   const map = useMap();
 
   useEffect(() => {
@@ -86,7 +97,7 @@ const WILAYAH_ZOOM = 10;
 function Legend() {
   return (
     <div
-      style={{ position: 'absolute', bottom: '16px', left: '16px', zIndex: 1000 }}
+      style={{ position: "absolute", bottom: "16px", left: "16px", zIndex: 1000 }}
       className="rounded border border-border bg-background/90 p-2 text-xs pointer-events-none"
     >
       <p className="font-medium mb-1">Keterangan warna (PM2.5)</p>
@@ -117,7 +128,7 @@ export default function PetaKualitasUdara({
 }: {
   center?: [number, number];
 }) {
-  const [dataList, setDataList] = useState<KualitasUdara[]>([]);
+  const [dataList, setDataList] = useState<LocationData[]>([]);
   const [loading, setLoading] = useState(true);
   const [pesan, setPesan] = useState<string | null>(null);
   const hasCustomCenter = center !== undefined;
@@ -143,8 +154,8 @@ export default function PetaKualitasUdara({
           }
           const json = await res.json();
           if (isMounted) {
-            const items: KualitasUdara[] = json.data ?? [];
-            setDataList(items);
+            const items: KualitasUdaraItem[] = json.data ?? [];
+            setDataList(groupByLocation(items));
             if (items.length === 0 && json.pesan) {
               setPesan(json.pesan);
             }
@@ -174,7 +185,7 @@ export default function PetaKualitasUdara({
             setPesan("Gagal memuat data kualitas udara");
             setDataList([]);
           } else {
-            setDataList(data ?? []);
+            setDataList(groupByLocation(data ?? []));
           }
           setLoading(false);
         }
@@ -216,37 +227,65 @@ export default function PetaKualitasUdara({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         {!hasCustomCenter && <FocusCenter dataList={dataList} />}
-        {dataList.map((item, index) => (
-          <CircleMarker
-            key={index}
-            center={[item.lintang, item.bujur]}
-            radius={8}
-            pathOptions={{
-              color: getMarkerColor(item.parameter, item.value),
-              fillColor: getMarkerColor(item.parameter, item.value),
-              fillOpacity: 0.7,
-            }}
-          >
-            <Popup>
-              <div className="flex flex-col gap-1">
-                <p className="font-medium">{item.location_name}</p>
-                <p>
-                  {item.parameter}: {item.value} {item.unit}
-                </p>
-                <p>
-                  Status: {getMarkerLabel(item.parameter, item.value)}
-                </p>
-                <p>Waktu: {new Date(item.waktu).toLocaleString("id-ID")}</p>
-              </div>
-            </Popup>
-          </CircleMarker>
-        ))}
+        {dataList.map((loc, index) => {
+          const pm25Value = loc.pm25?.value ?? 0;
+          const color = getMarkerColor(pm25Value);
+          return (
+            <CircleMarker
+              key={index}
+              center={[loc.lintang, loc.bujur]}
+              radius={10}
+              pathOptions={{
+                color: color,
+                fillColor: color,
+                fillOpacity: 0.8,
+                weight: 2,
+              }}
+            >
+              <Popup>
+                <div className="flex flex-col gap-1 min-w-[180px]">
+                  <p className="font-medium text-sm border-b pb-1">{loc.location_name}</p>
+                  {loc.pm25 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs">PM2.5</span>
+                      <span className="text-xs font-mono">
+                        {loc.pm25.value} {loc.pm25.unit}
+                      </span>
+                    </div>
+                  )}
+                  {loc.pm10 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs">PM10</span>
+                      <span className="text-xs font-mono">
+                        {loc.pm10.value} {loc.pm10.unit}
+                      </span>
+                    </div>
+                  )}
+                  {loc.others.map((o, i) => (
+                    <div key={i} className="flex justify-between items-center">
+                      <span className="text-xs">{o.parameter}</span>
+                      <span className="text-xs font-mono">
+                        {o.value} {o.unit}
+                      </span>
+                    </div>
+                  ))}
+                  <p className="text-xs pt-1 border-t mt-1">
+                    Status: <span className="font-medium">{getMarkerLabel(pm25Value)}</span>
+                  </p>
+                </div>
+              </Popup>
+            </CircleMarker>
+          );
+        })}
       </MapContainer>
 
       {dataList.length > 0 && <Legend />}
 
       {!loading && pesan && (
-        <div className="absolute rounded border border-border bg-background/90 p-3 text-sm text-warning" style={{ zIndex: 1000, bottom: 16, left: 16, right: 16 }}>
+        <div
+          className="absolute rounded border border-border bg-background/90 p-3 text-sm text-warning"
+          style={{ zIndex: 1000, bottom: 16, left: 16, right: 16 }}
+        >
           {pesan}
         </div>
       )}
