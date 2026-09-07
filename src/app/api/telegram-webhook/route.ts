@@ -31,7 +31,12 @@ async function sendTelegramMessage(chatId: number, text: string): Promise<void> 
     await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text }),
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+        parse_mode: "HTML",
+        disable_web_page_preview: false,
+      }),
     });
   } catch (error) {
     console.error("Gagal mengirim pesan Telegram:", error);
@@ -94,7 +99,7 @@ export async function POST(request: NextRequest) {
   const encodedWilayah = encodeURIComponent(text);
   await sendTelegramMessage(
     chatId,
-    `Wilayah pemantauan Anda telah diperbarui ke "${text}". Anda akan menerima notifikasi gempa (M ≥ 5.0) dan kualitas udara (AQI ≥ 150) untuk wilayah ini.\n\nAnda bisa lihat data lengkap untuk wilayah Anda di: https://sigapapp.vercel.app/?wilayah=${encodedWilayah}`
+    `Wilayah pemantauan Anda telah diperbarui ke "<b>${text}</b>". Anda akan menerima notifikasi gempa (M ≥ 5.0) dan kualitas udara (AQI ≥ 150) untuk wilayah ini.\n\n🔗 <a href="https://sigapapp.vercel.app/?wilayah=${encodedWilayah}">Lihat data lengkap untuk ${text}</a>`
   );
 
   return NextResponse.json({ ok: true });

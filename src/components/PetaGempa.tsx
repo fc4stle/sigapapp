@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  CircleMarker,
+  Popup,
+  useMap,
+} from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { createSupabaseAnonClient } from "@/lib/supabase-anon";
 
@@ -16,6 +22,7 @@ interface Gempa {
 }
 
 const YOGYAKARTA_CENTER: [number, number] = [-7.7956, 110.3695];
+const FOCUS_ZOOM = 8;
 
 function getMarkerColor(magnitude: number): string {
   if (magnitude > 5) return "#ef4444";
@@ -23,14 +30,17 @@ function getMarkerColor(magnitude: number): string {
   return "#eab308";
 }
 
-function FitBounds({ gempaList }: { gempaList: Gempa[] }) {
+function FocusCenter({ gempaList }: { gempaList: Gempa[] }) {
   const map = useMap();
 
   useEffect(() => {
     if (gempaList.length === 0) return;
 
-    const bounds = gempaList.map((g) => [g.lintang, g.bujur] as [number, number]);
-    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 10 });
+    const latest = gempaList[0];
+    map.setView([latest.lintang, latest.bujur], FOCUS_ZOOM, {
+      animate: true,
+      duration: 1,
+    });
   }, [gempaList, map]);
 
   return null;
@@ -131,7 +141,7 @@ export default function PetaGempa({
         className="absolute inset-0 pointer-events-none grid-map-bg"
         style={{ zIndex: 400 }}
       />
-      {!hasCustomCenter && <FitBounds gempaList={gempaList} />}
+      {!hasCustomCenter && <FocusCenter gempaList={gempaList} />}
       <RippleMarkers gempaList={gempaList} />
       {gempaList.map((gempa, index) => (
         <CircleMarker

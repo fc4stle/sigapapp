@@ -2,18 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { sendTelegramMessage } from "@/lib/telegram-notify";
 
-export const dynamic = "force-dynamic";
-
 const OPENAQ_BASE_URL = "https://api.openaq.org/v3";
-const YOGYAKARTA_COORDINATES = "-7.7956,110.3695";
 const SEARCH_RADIUS_METERS = 25000;
 const LOCATION_LIMIT = 10;
+const YOGYAKARTA_COORDINATES = "-7.7956,110.3695";
 const SIGAP_URL = "https://sigapapp.vercel.app";
 
-function isPm25OrPm10(parameter: string): boolean {
-  const normalized = parameter.toLowerCase().replace(/[^a-z0-9]/g, "");
-  return normalized === "pm25" || normalized === "pm10";
-}
+// Sentinel values yang menandakan data tidak valid dari berbagai sistem sensor
+const SENTINEL_THRESHOLD = -900;
 
 interface OpenAqParameter {
   id: number;
@@ -38,6 +34,7 @@ interface OpenAqLocation {
   name: string;
   coordinates: OpenAqCoordinates;
   sensors: OpenAqSensor[];
+  distance?: number;
 }
 
 interface OpenAqLocationsResponse {
@@ -74,6 +71,15 @@ interface KualitasUdaraUpsertedRow extends KualitasUdaraRow {
 interface KualitasUdaraSubscriber {
   telegram_chat_id: string;
   ambang_aqi: number;
+}
+
+function isValidMeasurement(value: number): boolean {
+  return value >= SENTINEL_THRESHOLD;
+}
+
+function isPm25OrPm10(parameter: string): boolean {
+  const normalized = parameter.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return normalized === "pm25" || normalized === "pm10";
 }
 
 export async function GET(request: NextRequest) {
@@ -116,7 +122,8 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const locationsPayload: OpenAqLocationsResponse = await locationsResponse.json();
+  const locationsPayload: OpenAqLocationsResponse =
+    await locationsResponse.json();
   const locations = locationsPayload.results ?? [];
 
   if (locations.length === 0) {
@@ -129,14 +136,19 @@ export async function GET(request: NextRequest) {
   const rows: KualitasUdaraRow[] = [];
 
   for (const location of locations) {
-    const sensorById = new Map(location.sensors.map((sensor) => [sensor.id, sensor]));
+    const sensorById = new Map(
+      location.sensors.map((sensor) => [sensor.id, sensor])
+    );
 
     let latestResponse: Response;
     try {
-      latestResponse = await fetch(`${OPENAQ_BASE_URL}/locations/${location.id}/latest`, {
-        headers: { "X-API-Key": apiKey },
-        cache: "no-store",
-      });
+      latestResponse = await fetch(
+        `${OPENAQ_BASE_URL}/locations/${location.id}/latest`,
+        {
+          headers: { "X-API-Key": apiKey },
+          cache: "no-store",
+        }
+      );
     } catch {
       continue;
     }
@@ -145,11 +157,20 @@ export async function GET(request: NextRequest) {
       continue;
     }
 
-    const latestPayload: OpenAqLatestResponse = await latestResponse.json();
+    const latestPayload: OpenAqLatestResponse =
+      await latestResponse.json();
 
     for (const result of latestPayload.results ?? []) {
       const sensor = sensorById.get(result.sensorsId);
       if (!sensor) {
+        continue;
+      }
+
+      // Filter sentinel values (data tidak valid)
+      if (!isValidMeasurement(result.value)) {
+        console.log(
+          `[fetch-kualitas-udara] SKIP sentinel value ${result.value} from ${location.name} / ${sensor.parameter.displayName}`
+        );
         continue;
       }
 
@@ -161,7 +182,8 @@ export async function GET(request: NextRequest) {
       rows.push({
         location_id: String(location.id),
         location_name: location.name,
-        parameter: sensor.parameter.displayName ?? sensor.parameter.name,
+        parameter:
+          sensor.parameter.displayName ?? sensor.parameter.name,
         value: result.value,
         unit: sensor.parameter.units,
         lintang: coordinates.latitude,
@@ -193,7 +215,10 @@ export async function GET(request: NextRequest) {
     (row) => !row.notified_at && isPm25OrPm10(row.parameter)
   );
 
-  console.log("[fetch-kualitas-udara] unnotifiedRows:", JSON.stringify(unnotifiedRows));
+  console.log(
+    "[fetch-kualitas-udara] unnotifiedRows:",
+    JSON.stringify(unnotifiedRows)
+  );
 
   if (unnotifiedRows.length > 0) {
     const { data: subscribers, error: subscriberError } = await supabase
@@ -202,26 +227,42 @@ export async function GET(request: NextRequest) {
       .eq("aktif", true)
       .returns<KualitasUdaraSubscriber[]>();
 
-    console.log("[fetch-kualitas-udara] subscriberError:", subscriberError);
-    console.log("[fetch-kualitas-udara] subscribers:", JSON.stringify(subscribers));
+    console.log(
+      "[fetch-kualitas-udara] subscriberError:",
+      subscriberError
+    );
+    console.log(
+      "[fetch-kualitas-udara] subscribers:",
+      JSON.stringify(subscribers)
+    );
 
     if (subscriberError) {
-      console.error("Gagal mengambil subscriber:", subscriberError.message);
+      console.error(
+        "Gagal mengambil subscriber:",
+        subscriberError.message
+      );
     } else {
       for (const row of unnotifiedRows) {
         for (const subscriber of subscribers ?? []) {
-          console.log(`[fetch-kualitas-udara] cek ${subscriber.telegram_chat_id}: value=${row.value} >= ambang=${subscriber.ambang_aqi}? ${row.value >= subscriber.ambang_aqi}`);
+          console.log(
+            `[fetch-kualitas-udara] cek ${subscriber.telegram_chat_id}: value=${row.value} >= ambang=${subscriber.ambang_aqi}? ${row.value >= subscriber.ambang_aqi}`
+          );
           if (row.value >= subscriber.ambang_aqi) {
             const sent = await sendTelegramMessage(
               subscriber.telegram_chat_id,
               `🌫️ <b>Peringatan Kualitas Udara!</b>\n\nLokasi: ${row.location_name}\nParameter: ${row.parameter}\nValue: ${row.value} ${row.unit}\nWaktu: ${row.waktu}\n\n🔗 ${SIGAP_URL}`
             );
-            console.log(`[fetch-kualitas-udara] kirim ke ${subscriber.telegram_chat_id}: ${sent ? "SUKSES" : "GAGAL"}`);
+            console.log(
+              `[fetch-kualitas-udara] kirim ke ${subscriber.telegram_chat_id}: ${sent ? "SUKSES" : "GAGAL"}`
+            );
           }
         }
       }
 
-      console.log("[fetch-kualitas-udara] update notified_at untuk ids:", unnotifiedRows.map(r => r.id));
+      console.log(
+        "[fetch-kualitas-udara] update notified_at untuk ids:",
+        unnotifiedRows.map((r) => r.id)
+      );
       const { error: notifiedError } = await supabase
         .from("kualitas_udara")
         .update({ notified_at: new Date().toISOString() })
@@ -236,11 +277,15 @@ export async function GET(request: NextRequest) {
           notifiedError.message
         );
       } else {
-        console.log("[fetch-kualitas-udara] notified_at BERHASIL di-update");
+        console.log(
+          "[fetch-kualitas-udara] notified_at BERHASIL di-update"
+        );
       }
     }
   } else {
-    console.log("[fetch-kualitas-udara] SKIP notifikasi — semua data sudah pernah di-notifikasi atau tidak ada PM2.5/PM10");
+    console.log(
+      "[fetch-kualitas-udara] SKIP notifikasi — semua data sudah pernah di-notifikasi atau tidak ada PM2.5/PM10"
+    );
   }
 
   return NextResponse.json({ data });

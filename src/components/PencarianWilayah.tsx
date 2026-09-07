@@ -24,12 +24,12 @@ export default function PencarianWilayah({
         type="text"
         value={wilayah}
         onChange={(event) => setWilayah(event.target.value)}
-        placeholder="Cari wilayah, misal: Sleman, Bantul, Jakarta"
-        className="flex-1 rounded border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
+        placeholder="Cari: Sleman, Bantul, Jakarta"
+        className="flex-1 min-w-0 rounded border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
       />
       <button
         type="submit"
-        className="rounded border border-accent px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/10"
+        className="shrink-0 rounded border border-accent px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/10"
       >
         Cari
       </button>

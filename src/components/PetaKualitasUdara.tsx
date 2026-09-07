@@ -46,22 +46,71 @@ function getMarkerColor(parameter: string, value: number): string {
   return "#3b82f6";
 }
 
-function FitBounds({ dataList }: { dataList: KualitasUdara[] }) {
+function getMarkerLabel(parameter: string, value: number): string {
+  const normalizedParameter = parameter.toLowerCase();
+  if (
+    normalizedParameter.includes("pm25") ||
+    normalizedParameter.includes("pm2.5")
+  ) {
+    if (value > 55) return "Tidak sehat";
+    if (value > 35) return "Sedang";
+    if (value > 12) return "Baik";
+    return "Sangat baik";
+  }
+  if (normalizedParameter.includes("pm10")) {
+    if (value > 150) return "Tidak sehat";
+    if (value > 100) return "Sedang";
+    if (value > 50) return "Baik";
+    return "Sangat baik";
+  }
+  return "N/A";
+}
+
+function FocusCenter({ dataList }: { dataList: KualitasUdara[] }) {
   const map = useMap();
 
   useEffect(() => {
     if (dataList.length === 0) return;
-
-    const bounds = dataList.map(
-      (d) => [d.lintang, d.bujur] as [number, number]
-    );
-    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 10 });
+    const latest = dataList[0];
+    map.setView([latest.lintang, latest.bujur], 10, {
+      animate: true,
+      duration: 1,
+    });
   }, [dataList, map]);
 
   return null;
 }
 
 const WILAYAH_ZOOM = 10;
+
+function Legend() {
+  return (
+    <div
+      style={{ position: 'absolute', bottom: '16px', left: '16px', zIndex: 1000 }}
+      className="rounded border border-border bg-background/90 p-2 text-xs pointer-events-none"
+    >
+      <p className="font-medium mb-1">Keterangan warna (PM2.5)</p>
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <span className="inline-block w-3 h-3 rounded-full" style={{ background: "#22c55e" }} />
+          <span>Baik (≤12)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="inline-block w-3 h-3 rounded-full" style={{ background: "#eab308" }} />
+          <span>Sedang (12-35)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="inline-block w-3 h-3 rounded-full" style={{ background: "#f97316" }} />
+          <span>Tidak sehat (35-55)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="inline-block w-3 h-3 rounded-full" style={{ background: "#ef4444" }} />
+          <span>Bahaya (&gt;55)</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function PetaKualitasUdara({
   center,
@@ -79,7 +128,6 @@ export default function PetaKualitasUdara({
     setPesan(null);
 
     async function fetchKualitasUdara() {
-      // Kalau ada center custom (wilayah dari URL), pakai API dinamis
       if (hasCustomCenter && center) {
         try {
           const res = await fetch(
@@ -112,7 +160,6 @@ export default function PetaKualitasUdara({
         return;
       }
 
-      // Default: fetch dari Supabase (data historis cron)
       try {
         const supabase = createSupabaseAnonClient();
         const { data, error } = await supabase
@@ -168,7 +215,7 @@ export default function PetaKualitasUdara({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        {!hasCustomCenter && <FitBounds dataList={dataList} />}
+        {!hasCustomCenter && <FocusCenter dataList={dataList} />}
         {dataList.map((item, index) => (
           <CircleMarker
             key={index}
@@ -182,9 +229,12 @@ export default function PetaKualitasUdara({
           >
             <Popup>
               <div className="flex flex-col gap-1">
-                <p>Lokasi: {item.location_name}</p>
+                <p className="font-medium">{item.location_name}</p>
                 <p>
                   {item.parameter}: {item.value} {item.unit}
+                </p>
+                <p>
+                  Status: {getMarkerLabel(item.parameter, item.value)}
                 </p>
                 <p>Waktu: {new Date(item.waktu).toLocaleString("id-ID")}</p>
               </div>
@@ -193,8 +243,10 @@ export default function PetaKualitasUdara({
         ))}
       </MapContainer>
 
+      {dataList.length > 0 && <Legend />}
+
       {!loading && pesan && (
-        <div className="absolute bottom-4 left-4 right-4 z-50 rounded border border-border bg-background/90 p-3 text-sm text-warning">
+        <div className="absolute rounded border border-border bg-background/90 p-3 text-sm text-warning" style={{ zIndex: 1000, bottom: 16, left: 16, right: 16 }}>
           {pesan}
         </div>
       )}

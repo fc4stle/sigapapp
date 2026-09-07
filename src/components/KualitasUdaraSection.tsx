@@ -130,6 +130,9 @@ export default function KualitasUdaraSection({ center, wilayah }: Props) {
             </p>
           )}
         </div>
+        <p className="text-xs text-muted">
+          Data kualitas udara dari sensor pemantauan terdekat, diperbarui berkala
+        </p>
         {displayWilayah && !loading && distanceKm !== null && wilayahTerdekat && (
           <p className="text-xs text-muted">
             Sensor terdekat: <span className="font-medium text-foreground">{wilayahTerdekat}</span> ({distanceKm} km dari {displayWilayah})

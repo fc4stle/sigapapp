@@ -6,6 +6,13 @@ const OPENAQ_BASE_URL = "https://api.openaq.org/v3";
 const SEARCH_RADIUS_METERS = 25000;
 const LOCATION_LIMIT = 10;
 
+// Sentinel values yang menandakan data tidak valid dari berbagai sistem sensor
+const SENTINEL_THRESHOLD = -900;
+
+function isValidMeasurement(value: number): boolean {
+  return value >= SENTINEL_THRESHOLD;
+}
+
 interface OpenAqParameter {
   id: number;
   name: string;
@@ -163,6 +170,14 @@ export async function GET(request: NextRequest) {
     for (const result of latestPayload.results ?? []) {
       const sensor = sensorById.get(result.sensorsId);
       if (!sensor) {
+        continue;
+      }
+
+      // Filter sentinel values (data tidak valid)
+      if (!isValidMeasurement(result.value)) {
+        console.log(
+          `[kualitas-udara] SKIP sentinel value ${result.value} from ${location.name} / ${sensor.parameter.displayName}`
+        );
         continue;
       }
 
