@@ -278,8 +278,8 @@ export default function PetaKualitasUdara({
             </CircleMarker>
           );
         })}
+        <AccessibleAirQualityMarkers dataList={dataList} />
       </MapContainer>
-      <AccessibleAirQualityMarkers dataList={dataList} />
 
       {dataList.length > 0 && <Legend />}
 
