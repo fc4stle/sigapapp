@@ -1,5 +1,6 @@
 import { createSupabaseAnonClient } from "@/lib/supabase-anon";
 import { geocodeWilayah } from "@/lib/geocode";
+import { capitalize, validasiWilayah } from "@/lib/format-wilayah";
 import PetaGempaWrapper from "@/components/PetaGempaWrapper";
 import KualitasUdaraSection from "@/components/KualitasUdaraSection";
 import RefreshButton from "@/components/RefreshButton";
@@ -10,10 +11,6 @@ export const dynamic = "force-dynamic";
 
 const YOGYAKARTA_CENTER: [number, number] = [-7.7956, 110.3695];
 
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
-}
-
 export async function generateMetadata({
   searchParams,
 }: {
@@ -21,11 +18,14 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { wilayah } = await searchParams;
   if (wilayah) {
-    const nama = capitalize(wilayah);
-    return {
-      title: `Sigap ${nama}`,
-      description: `Pantau gempa dan udara di ${nama}`,
-    };
+    const v = validasiWilayah(wilayah);
+    if (v.valid) {
+      const nama = capitalize(v.nama);
+      return {
+        title: `Sigap ${nama}`,
+        description: `Pantau gempa dan udara di ${nama}`,
+      };
+    }
   }
   return {
     title: "Sigap Yogyakarta",
@@ -151,12 +151,17 @@ export default async function Home({
   let pesanWilayah: string | null = null;
 
   if (wilayah) {
-    const hasil = await geocodeWilayah(wilayah);
-    if (hasil) {
-      namaWilayah = wilayah;
-      pusatPeta = [hasil.lat, hasil.lon];
+    const v = validasiWilayah(wilayah);
+    if (!v.valid) {
+      pesanWilayah = v.pesan ?? "Nama wilayah tidak valid, menampilkan data Yogyakarta";
     } else {
-      pesanWilayah = "Wilayah tidak ditemukan, menampilkan data Yogyakarta";
+      const hasil = await geocodeWilayah(v.nama);
+      if (hasil) {
+        namaWilayah = capitalize(v.nama);
+        pusatPeta = [hasil.lat, hasil.lon];
+      } else {
+        pesanWilayah = "Wilayah tidak ditemukan, menampilkan data Yogyakarta";
+      }
     }
   }
 

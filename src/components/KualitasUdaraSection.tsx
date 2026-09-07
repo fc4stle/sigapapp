@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import { capitalize } from "@/lib/format-wilayah";
 import KualitasUdaraList from "./KualitasUdaraList";
 
 const PetaKualitasUdara = dynamic(() => import("./PetaKualitasUdara"), {
@@ -39,6 +40,7 @@ export default function KualitasUdaraSection({ center, wilayah }: Props) {
   const [loading, setLoading] = useState(true);
   const [pesan, setPesan] = useState<string | null>(null);
   const hasCustomCenter = center !== undefined;
+  const displayWilayah = wilayah ? capitalize(wilayah) : null;
 
   useEffect(() => {
     let isMounted = true;
@@ -122,15 +124,15 @@ export default function KualitasUdaraSection({ center, wilayah }: Props) {
       <div className="flex flex-col gap-1">
         <div className="flex items-baseline justify-between gap-4">
           <h2 className="text-lg font-semibold">Kualitas udara</h2>
-          {wilayah && !loading && (
+          {displayWilayah && !loading && (
             <p className="text-sm text-muted">
-              Sensor dalam radius 25km dari {wilayah}
+              Sensor dalam radius 25km dari {displayWilayah}
             </p>
           )}
         </div>
-        {wilayah && !loading && distanceKm !== null && wilayahTerdekat && (
+        {displayWilayah && !loading && distanceKm !== null && wilayahTerdekat && (
           <p className="text-xs text-muted">
-            Sensor terdekat: <span className="font-medium text-foreground">{wilayahTerdekat}</span> ({distanceKm} km dari {wilayah})
+            Sensor terdekat: <span className="font-medium text-foreground">{wilayahTerdekat}</span> ({distanceKm} km dari {displayWilayah})
           </p>
         )}
       </div>
