@@ -7,6 +7,8 @@ import KualitasUdaraSection from "@/components/KualitasUdaraSection";
 import RefreshButton from "@/components/RefreshButton";
 import PencarianWilayah from "@/components/PencarianWilayah";
 import RingkasanStatus from "@/components/RingkasanStatus";
+import GempaTrendSection from "@/components/GempaTrendSection";
+import TrendRangeProvider from "@/components/TrendRangeProvider";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -279,54 +281,58 @@ export default async function Home({
           namaWilayah={namaWilayah}
         />
 
-        <section className="flex flex-col gap-4 border-b border-border pb-10">
-          <h2 className="text-lg font-semibold">Gempa terkini</h2>
+        <TrendRangeProvider>
+          <section className="flex flex-col gap-4 border-b border-border pb-10">
+            <h2 className="text-lg font-semibold">Gempa terkini</h2>
 
-          <div className="h-[500px] w-full overflow-hidden border border-border">
-            <PetaGempaWrapper center={pusatPeta ?? undefined} />
-          </div>
+            <div className="h-[500px] w-full overflow-hidden border border-border">
+              <PetaGempaWrapper center={pusatPeta ?? undefined} />
+            </div>
 
-          {error ? (
-            <p className="text-red-400">
-              Gagal memuat data gempa: {error.message}
-            </p>
-          ) : !gempaList || gempaList.length === 0 ? (
-            <p className="text-muted">Belum ada data gempa</p>
-          ) : (
-            <>
-              {koordinatWilayah && (
-                <p className="text-xs text-muted">
-                  Diurutkan dari yang terdekat dengan {namaWilayah}
-                </p>
-              )}
-              <ul className="flex flex-col">
-                {gempaSorted?.map((gempa: any, index) => (
-                  <li
-                    key={index}
-                    className="flex flex-col gap-1 border-b border-divider py-4 last:border-b-0"
-                  >
-                    <p className="font-mono text-2xl text-accent">
-                      Magnitude {gempa.magnitude}
-                    </p>
-                    <p>{gempa.wilayah}</p>
-                    <p className="text-sm text-muted">
-                      Kedalaman {gempa.kedalaman}, terjadi{" "}
-                      {formatTanggalGempa(gempa.tanggal)} pukul{" "}
-                      {formatJamGempa(gempa.jam)}
-                    </p>
-                    {"_jarak" in gempa && (
-                      <p className="text-xs text-muted">
-                        {Math.round(gempa._jarak)} km dari {namaWilayah}
+            {error ? (
+              <p className="text-red-400">
+                Gagal memuat data gempa: {error.message}
+              </p>
+            ) : !gempaList || gempaList.length === 0 ? (
+              <p className="text-muted">Belum ada data gempa</p>
+            ) : (
+              <>
+                {koordinatWilayah && (
+                  <p className="text-xs text-muted">
+                    Diurutkan dari yang terdekat dengan {namaWilayah}
+                  </p>
+                )}
+                <ul className="flex flex-col">
+                  {gempaSorted?.map((gempa: any, index) => (
+                    <li
+                      key={index}
+                      className="flex flex-col gap-1 border-b border-divider py-4 last:border-b-0"
+                    >
+                      <p className="font-mono text-2xl text-accent">
+                        Magnitude {gempa.magnitude}
                       </p>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </section>
+                      <p>{gempa.wilayah}</p>
+                      <p className="text-sm text-muted">
+                        Kedalaman {gempa.kedalaman}, terjadi{" "}
+                        {formatTanggalGempa(gempa.tanggal)} pukul{" "}
+                        {formatJamGempa(gempa.jam)}
+                      </p>
+                      {"_jarak" in gempa && (
+                        <p className="text-xs text-muted">
+                          {Math.round(gempa._jarak)} km dari {namaWilayah}
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
 
-        <KualitasUdaraSection center={pusatPeta ?? undefined} wilayah={wilayah} />
+            <GempaTrendSection />
+          </section>
+
+          <KualitasUdaraSection center={pusatPeta ?? undefined} wilayah={wilayah} />
+        </TrendRangeProvider>
       </main>
     </div>
   );

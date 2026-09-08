@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { capitalize } from "@/lib/format-wilayah";
 import KualitasUdaraList from "./KualitasUdaraList";
+import KualitasUdaraTrendChart from "./KualitasUdaraTrendChart";
+import { useTrendRange } from "./TrendRangeProvider";
 import type { KualitasUdaraItem, SumberData } from "@/types/kualitas-udara";
 
 const PetaKualitasUdara = dynamic(() => import("./PetaKualitasUdara"), {
@@ -33,6 +35,7 @@ interface Props {
 }
 
 export default function KualitasUdaraSection({ center, wilayah }: Props) {
+  const range = useTrendRange();
   const [dataList, setDataList] = useState<KualitasUdaraItem[]>([]);
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
   const [wilayahTerdekat, setWilayahTerdekat] = useState<string | null>(null);
@@ -180,6 +183,13 @@ export default function KualitasUdaraSection({ center, wilayah }: Props) {
 
       {!loading && dataList.length > 0 && (
         <KualitasUdaraList items={dataList} />
+      )}
+
+      {!loading && (
+        <KualitasUdaraTrendChart
+          range={range}
+          wilayahTerdekat={wilayahTerdekat}
+        />
       )}
     </section>
   );
