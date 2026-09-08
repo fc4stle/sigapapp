@@ -1,5 +1,6 @@
 import { createSupabaseAnonClient } from "@/lib/supabase-anon";
 import { geocodeWilayah } from "@/lib/geocode";
+import { haversineKm } from "@/lib/distance";
 import { capitalize, validasiWilayah } from "@/lib/format-wilayah";
 import PetaGempaWrapper from "@/components/PetaGempaWrapper";
 import KualitasUdaraSection from "@/components/KualitasUdaraSection";
@@ -148,7 +149,7 @@ export default async function Home({
   const { wilayah } = await searchParams;
 
   let namaWilayah = "Yogyakarta";
-  let pusatPeta = YOGYAKARTA_CENTER;
+  let pusatPeta: [number, number] | null = null;
   let pesanWilayah: string | null = null;
 
   if (wilayah) {
@@ -169,8 +170,21 @@ export default async function Home({
   const supabase = createSupabaseAnonClient();
   const { data: gempaList, error } = await supabase
     .from("gempa")
-    .select("magnitude, wilayah, tanggal, jam, kedalaman")
+    .select("magnitude, wilayah, tanggal, jam, kedalaman, lintang, bujur")
     .order("date_time", { ascending: false });
+
+  const koordinatWilayah: [number, number] | null = pusatPeta;
+
+  let gempaSorted = gempaList;
+  if (koordinatWilayah && gempaList && gempaList.length > 0) {
+    const [latW, lonW] = koordinatWilayah;
+    gempaSorted = [...gempaList]
+      .map((g) => ({
+        ...g,
+        _jarak: haversineKm(latW, lonW, g.lintang, g.bujur),
+      }))
+      .sort((a, b) => a._jarak - b._jarak);
+  }
   const { data: kualitasUdaraList, error: kualitasUdaraError } = await supabase
     .from("kualitas_udara")
     .select("location_name, parameter, value, unit, waktu")
@@ -269,7 +283,7 @@ export default async function Home({
           <h2 className="text-lg font-semibold">Gempa terkini</h2>
 
           <div className="h-[500px] w-full overflow-hidden border border-border">
-            <PetaGempaWrapper center={wilayah ? pusatPeta : undefined} />
+            <PetaGempaWrapper center={pusatPeta ?? undefined} />
           </div>
 
           {error ? (
@@ -279,28 +293,40 @@ export default async function Home({
           ) : !gempaList || gempaList.length === 0 ? (
             <p className="text-muted">Belum ada data gempa</p>
           ) : (
-            <ul className="flex flex-col">
-              {gempaList.map((gempa, index) => (
-                <li
-                  key={index}
-                  className="flex flex-col gap-1 border-b border-divider py-4 last:border-b-0"
-                >
-                  <p className="font-mono text-2xl text-accent">
-                    Magnitude {gempa.magnitude}
-                  </p>
-                  <p>{gempa.wilayah}</p>
-                  <p className="text-sm text-muted">
-                    Kedalaman {gempa.kedalaman}, terjadi{" "}
-                    {formatTanggalGempa(gempa.tanggal)} pukul{" "}
-                    {formatJamGempa(gempa.jam)}
-                  </p>
-                </li>
-              ))}
-            </ul>
+            <>
+              {koordinatWilayah && (
+                <p className="text-xs text-muted">
+                  Diurutkan dari yang terdekat dengan {namaWilayah}
+                </p>
+              )}
+              <ul className="flex flex-col">
+                {gempaSorted?.map((gempa: any, index) => (
+                  <li
+                    key={index}
+                    className="flex flex-col gap-1 border-b border-divider py-4 last:border-b-0"
+                  >
+                    <p className="font-mono text-2xl text-accent">
+                      Magnitude {gempa.magnitude}
+                    </p>
+                    <p>{gempa.wilayah}</p>
+                    <p className="text-sm text-muted">
+                      Kedalaman {gempa.kedalaman}, terjadi{" "}
+                      {formatTanggalGempa(gempa.tanggal)} pukul{" "}
+                      {formatJamGempa(gempa.jam)}
+                    </p>
+                    {"_jarak" in gempa && (
+                      <p className="text-xs text-muted">
+                        {Math.round(gempa._jarak)} km dari {namaWilayah}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
         </section>
 
-        <KualitasUdaraSection center={wilayah ? pusatPeta : undefined} wilayah={wilayah} />
+        <KualitasUdaraSection center={pusatPeta ?? undefined} wilayah={wilayah} />
       </main>
     </div>
   );
