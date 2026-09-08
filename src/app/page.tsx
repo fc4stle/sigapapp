@@ -5,6 +5,7 @@ import PetaGempaWrapper from "@/components/PetaGempaWrapper";
 import KualitasUdaraSection from "@/components/KualitasUdaraSection";
 import RefreshButton from "@/components/RefreshButton";
 import PencarianWilayah from "@/components/PencarianWilayah";
+import RingkasanStatus from "@/components/RingkasanStatus";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -257,6 +258,12 @@ export default async function Home({
         <PencarianWilayah defaultValue={wilayah} />
 
         <RefreshButton />
+
+        <RingkasanStatus
+          gempaList={gempaList ?? null}
+          udaraList={kualitasUdaraList ?? null}
+          namaWilayah={namaWilayah}
+        />
 
         <section className="flex flex-col gap-4 border-b border-border pb-10">
           <h2 className="text-lg font-semibold">Gempa terkini</h2>
