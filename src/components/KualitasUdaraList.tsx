@@ -101,9 +101,11 @@ function LocationBlock({ loc }: { loc: LocationData }) {
       </p>
 
       {loc.items.length > 0 && (
-        <div className="flex items-center justify-center gap-4 mb-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-3">
           {loc.items.map((item, i) => (
-            <Gauge key={i} item={item} />
+            <div key={i} className="flex justify-center">
+              <Gauge item={item} />
+            </div>
           ))}
         </div>
       )}

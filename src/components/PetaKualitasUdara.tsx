@@ -104,43 +104,66 @@ function FocusCenter({ dataList }: { dataList: LocationData[] }) {
 const WILAYAH_ZOOM = 10;
 
 function Legend() {
+  const [open, setOpen] = useState(false);
+
   return (
     <div
-      style={{ position: "absolute", bottom: "16px", left: "16px", zIndex: 1000 }}
-      className="rounded border border-border bg-background/90 p-2 text-xs pointer-events-none"
+      style={{ position: "absolute", top: "16px", right: "16px", zIndex: 1000 }}
     >
-      <p className="font-medium mb-1">Keterangan warna</p>
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <span className="inline-block w-3 h-3 rounded-full" style={{ background: "#22c55e" }} />
-          <span>Baik</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="inline-block w-3 h-3 rounded-full" style={{ background: "#eab308" }} />
-          <span>Sedang</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="inline-block w-3 h-3 rounded-full" style={{ background: "#f97316" }} />
-          <span>Tidak sehat</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="inline-block w-3 h-3 rounded-full" style={{ background: "#ef4444" }} />
-          <span>Bahaya</span>
-        </div>
-      </div>
-      <div className="mt-2 pt-2 border-t border-border">
-        <p className="font-medium mb-1">Border</p>
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <span className="inline-block w-3 h-3 rounded-full border-2 border-solid" style={{ borderColor: "#8B96A5" }} />
-            <span>OpenAQ</span>
+      {open ? (
+        <div className="rounded border border-border bg-background/90 p-2 text-xs shadow-lg">
+          <div className="flex items-center justify-between gap-3 mb-1">
+            <p className="font-medium">Keterangan warna</p>
+            <button
+              onClick={() => setOpen(false)}
+              className="flex h-5 w-5 items-center justify-center rounded hover:bg-muted/20"
+              aria-label="Tutup legenda"
+            >
+              <span className="text-xs">✕</span>
+            </button>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="inline-block w-3 h-3 rounded-full border-2 border-dashed" style={{ borderColor: "#8B96A5" }} />
-            <span>KLHK</span>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <span className="inline-block w-3 h-3 rounded-full" style={{ background: "#22c55e" }} />
+              <span>Baik</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="inline-block w-3 h-3 rounded-full" style={{ background: "#eab308" }} />
+              <span>Sedang</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="inline-block w-3 h-3 rounded-full" style={{ background: "#f97316" }} />
+              <span>Tidak sehat</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="inline-block w-3 h-3 rounded-full" style={{ background: "#ef4444" }} />
+              <span>Bahaya</span>
+            </div>
+          </div>
+          <div className="mt-2 pt-2 border-t border-border">
+            <p className="font-medium mb-1">Border</p>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-3 h-3 rounded-full border-2 border-solid" style={{ borderColor: "#8B96A5" }} />
+                <span>OpenAQ</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-3 h-3 rounded-full border-2 border-dashed" style={{ borderColor: "#8B96A5" }} />
+                <span>KLHK</span>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <button
+          onClick={() => setOpen(true)}
+          className="flex h-8 w-8 items-center justify-center rounded border border-border bg-background/90 text-xs shadow-lg hover:bg-background"
+          aria-label="Buka legenda"
+          title="Keterangan warna"
+        >
+          <span className="text-sm">ℹ</span>
+        </button>
+      )}
     </div>
   );
 }
