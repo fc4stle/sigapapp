@@ -6,6 +6,7 @@ import { capitalize } from "@/lib/format-wilayah";
 import KualitasUdaraList from "./KualitasUdaraList";
 import KualitasUdaraTrendChart from "./KualitasUdaraTrendChart";
 import { useTrendRange } from "./TrendRangeProvider";
+import UdaraHoverProvider from "./UdaraHoverProvider";
 import type { KualitasUdaraItem, SumberData } from "@/types/kualitas-udara";
 
 const PetaKualitasUdara = dynamic(() => import("./PetaKualitasUdara"), {
@@ -166,24 +167,26 @@ export default function KualitasUdaraSection({ center, wilayah }: Props) {
         )}
       </div>
 
-      <div className="h-[500px] w-full overflow-hidden border border-border">
-        <PetaKualitasUdara center={center} dataList={dataList} />
-      </div>
-
-      {loading && (
-        <div className="flex items-center gap-2 text-sm text-muted">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
-          Memuat data kualitas udara...
+      <UdaraHoverProvider>
+        <div className="h-[500px] w-full overflow-hidden border border-border">
+          <PetaKualitasUdara center={center} dataList={dataList} />
         </div>
-      )}
 
-      {!loading && pesan && (
-        <p className="text-sm text-warning">{pesan}</p>
-      )}
+        {loading && (
+          <div className="flex items-center gap-2 text-sm text-muted">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+            Memuat data kualitas udara...
+          </div>
+        )}
 
-      {!loading && dataList.length > 0 && (
-        <KualitasUdaraList items={dataList} />
-      )}
+        {!loading && pesan && (
+          <p className="text-sm text-warning">{pesan}</p>
+        )}
+
+        {!loading && dataList.length > 0 && (
+          <KualitasUdaraList items={dataList} />
+        )}
+      </UdaraHoverProvider>
 
       {!loading && (
         <KualitasUdaraTrendChart

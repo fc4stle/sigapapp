@@ -51,6 +51,51 @@ function formatWaktu(iso: string, range: TimeRange): string {
   }).format(date);
 }
 
+function formatWaktuTooltip(iso: string): string {
+  const date = new Date(iso);
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Jakarta",
+  }).format(date);
+}
+
+type TrendDirection = "up" | "down" | "flat";
+
+function getTrend(data: GempaTrendPoint[]): TrendDirection {
+  if (data.length < 2) return "flat";
+  const last = data[data.length - 1].magnitude;
+  const prev = data[data.length - 2].magnitude;
+  if (last > prev) return "up";
+  if (last < prev) return "down";
+  return "flat";
+}
+
+function TrendIndicator({ data }: { data: GempaTrendPoint[] }) {
+  const trend = getTrend(data);
+  if (trend === "flat") return null;
+
+  const color = trend === "up" ? "#ef4444" : "#22c55e";
+  const arrow = trend === "up" ? "▲" : "▼";
+  const label = trend === "up" ? "Meningkat" : "Menurun";
+
+  return (
+    <div
+      className="flex items-center gap-1"
+      style={{ fontSize: "11px", color, fontFamily: "var(--font-ibm-plex-mono)" }}
+      title={label}
+      aria-label={`Tren magnitude ${label.toLowerCase()}`}
+    >
+      <span>{arrow}</span>
+      <span>{label}</span>
+    </div>
+  );
+}
+
 export default function GempaTrendChart({ range }: Props) {
   const [data, setData] = useState<GempaTrendPoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -105,7 +150,10 @@ export default function GempaTrendChart({ range }: Props) {
 
   return (
     <div className="flex flex-col gap-2">
-      <h3 className="text-sm font-semibold">Tren magnitude gempa</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold">Tren magnitude gempa</h3>
+        <TrendIndicator data={data} />
+      </div>
       <div
         className="h-[260px] w-full rounded"
         style={{ backgroundColor: "#181510" }}
@@ -150,7 +198,9 @@ export default function GempaTrendChart({ range }: Props) {
               itemStyle={{ color: "#D99A3E" }}
               formatter={(value) => [`Magnitude ${value}`, ""]}
               labelFormatter={(label, payload) =>
-                payload?.[0]?.payload?.wilayah ?? label
+                payload?.[0]?.payload?.date_time
+                  ? formatWaktuTooltip(payload[0].payload.date_time)
+                  : label
               }
             />
             <Bar dataKey="magnitude" radius={[2, 2, 0, 0]}>

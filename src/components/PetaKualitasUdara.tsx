@@ -6,11 +6,13 @@ import {
   TileLayer,
   CircleMarker,
   Popup,
+  Tooltip,
   useMap,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { createSupabaseAnonClient } from "@/lib/supabase-anon";
 import AccessibleAirQualityMarkers from "./AccessibleAirQualityMarkers";
+import { udaraKey, useUdaraHover } from "./UdaraHoverProvider";
 
 export type SumberData = "OpenAQ" | "KLHK";
 
@@ -27,7 +29,7 @@ export interface KualitasUdaraItem {
   ispu_val?: number;
 }
 
-interface LocationData {
+export interface LocationData {
   location_name: string;
   lintang: number;
   bujur: number;
@@ -168,6 +170,41 @@ function Legend() {
   );
 }
 
+// Adaptive tooltip that adjusts direction based on marker position
+function AdaptiveTooltip({ lat, lng, children }: { lat: number; lng: number; children: React.ReactNode }) {
+  const map = useMap();
+  const [direction, setDirection] = useState<"top" | "left">("top");
+  const [offset, setOffset] = useState<[number, number]>([0, -10]);
+
+  useEffect(() => {
+    const updateDirection = () => {
+      const point = map.latLngToContainerPoint([lat, lng]);
+      const size = map.getSize();
+      const xRatio = point.x / size.x;
+      
+      if (xRatio > 0.7) {
+        setDirection("left");
+        setOffset([-10, 0]);
+      } else {
+        setDirection("top");
+        setOffset([0, -10]);
+      }
+    };
+
+    updateDirection();
+    map.on("move zoom resize", updateDirection);
+    return () => {
+      map.off("move zoom resize", updateDirection);
+    };
+  }, [map, lat, lng]);
+
+  return (
+    <Tooltip key={direction} direction={direction} offset={offset} className="gempa-tooltip">
+      {children}
+    </Tooltip>
+  );
+}
+
 interface Props {
   center?: [number, number];
   dataList?: KualitasUdaraItem[];
@@ -178,6 +215,7 @@ export default function PetaKualitasUdara({ center, dataList: externalDataList }
   const [loading, setLoading] = useState(true);
   const [pesan, setPesan] = useState<string | null>(null);
   const hasCustomCenter = center !== undefined;
+  const { hoveredUdaraKey } = useUdaraHover();
 
   useEffect(() => {
     if (externalDataList !== undefined) {
@@ -317,27 +355,36 @@ export default function PetaKualitasUdara({ center, dataList: externalDataList }
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         {!hasCustomCenter && <FocusCenter dataList={dataList} />}
-        {dataList.map((loc, index) => {
+        {dataList.map((loc) => {
           const pm25Item = loc.items.find((i) => i.parameter.toLowerCase().includes("pm25") || i.parameter.toLowerCase().includes("pm2.5"));
           const primaryItem = pm25Item ?? loc.items[0];
           const isKlhk = primaryItem.sumber === "KLHK";
           const color = isKlhk
             ? ispuCategoryColor(primaryItem.ispu_category ?? "")
             : getMarkerColor(primaryItem.value);
+          const isHovered = hoveredUdaraKey === udaraKey(loc);
+          const tooltipText = isKlhk
+            ? `${primaryItem.parameter}: ${primaryItem.value} - ${primaryItem.ispu_category ?? ""}`
+            : `PM2.5: ${primaryItem.value} - ${getMarkerLabel(primaryItem.value)}`;
 
           return (
             <CircleMarker
-              key={index}
+              key={udaraKey(loc)}
               center={[loc.lintang, loc.bujur]}
-              radius={10}
+              radius={isHovered ? 13 : 10}
               pathOptions={{
-                color: color,
+                color: isHovered ? "#ffffff" : color,
                 fillColor: color,
                 fillOpacity: 0.8,
-                weight: 2,
+                weight: isHovered ? 3 : 2,
                 dashArray: isKlhk ? "4 4" : undefined,
               }}
             >
+              <AdaptiveTooltip lat={loc.lintang} lng={loc.bujur}>
+                <span style={{ fontFamily: "var(--font-ibm-plex-mono)" }}>
+                  {tooltipText}
+                </span>
+              </AdaptiveTooltip>
               <Popup>
                 <div className="flex flex-col gap-1 min-w-[200px]">
                   <p className="font-medium text-sm border-b pb-1">{loc.location_name}</p>

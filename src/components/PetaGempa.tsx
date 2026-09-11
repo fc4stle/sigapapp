@@ -6,11 +6,13 @@ import {
   TileLayer,
   CircleMarker,
   Popup,
+  Tooltip,
   useMap,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { createSupabaseAnonClient } from "@/lib/supabase-anon";
 import AccessibleMarkers from "./AccessibleMarkers";
+import { gempaKey, useGempaHover } from "./GempaHoverProvider";
 
 interface Gempa {
   magnitude: number;
@@ -47,7 +49,6 @@ function FitAllGempa({ gempaList }: { gempaList: Gempa[] }) {
     const bounds = gempaList.map(
       (g) => [g.lintang, g.bujur] as [number, number]
     );
-    // Delay fitBounds until after markers are rendered
     requestAnimationFrame(() => {
       map.fitBounds(bounds, { padding: [30, 30], maxZoom: 6 });
     });
@@ -112,15 +113,63 @@ function RippleMarkers({ gempaList }: { gempaList: Gempa[] }) {
   );
 }
 
-export default function PetaGempa({
-  center,
-}: {
-  center?: [number, number];
-}) {
-  const [gempaList, setGempaList] = useState<Gempa[]>([]);
-  const hasCustomCenter = center !== undefined;
+function getKedalamanSingkat(kedalaman: string): string {
+  const match = kedalaman.match(/(\d+)/);
+  return match ? match[1] : "";
+}
+
+// Adaptive tooltip that adjusts direction based on marker position
+function AdaptiveTooltip({ lat, lng, children }: { lat: number; lng: number; children: React.ReactNode }) {
+  const map = useMap();
+  const [direction, setDirection] = useState<"top" | "left">("top");
+  const [offset, setOffset] = useState<[number, number]>([0, -10]);
 
   useEffect(() => {
+    const updateDirection = () => {
+      const point = map.latLngToContainerPoint([lat, lng]);
+      const size = map.getSize();
+      const xRatio = point.x / size.x;
+      
+      if (xRatio > 0.7) {
+        setDirection("left");
+        setOffset([-10, 0]);
+      } else {
+        setDirection("top");
+        setOffset([0, -10]);
+      }
+    };
+
+    updateDirection();
+    map.on("move zoom resize", updateDirection);
+    return () => {
+      map.off("move zoom resize", updateDirection);
+    };
+  }, [map, lat, lng]);
+
+  return (
+    <Tooltip key={direction} direction={direction} offset={offset} className="gempa-tooltip">
+      {children}
+    </Tooltip>
+  );
+}
+
+export default function PetaGempa({
+  center,
+  gempaList: externalGempaList,
+}: {
+  center?: [number, number];
+  gempaList?: Gempa[];
+}) {
+  const hasCustomCenter = center !== undefined;
+  const { hoveredGempaKey } = useGempaHover();
+
+  const [internalGempaList, setInternalGempaList] = useState<Gempa[]>([]);
+
+  useEffect(() => {
+    if (externalGempaList !== undefined) {
+      setInternalGempaList(externalGempaList);
+      return;
+    }
     let isMounted = true;
 
     async function fetchGempa() {
@@ -131,16 +180,17 @@ export default function PetaGempa({
         .order("date_time", { ascending: false });
 
       if (!error && data && isMounted) {
-        setGempaList(data);
+        setInternalGempaList(data);
       }
     }
 
     fetchGempa();
-
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [externalGempaList]);
+
+  const gempaList = externalGempaList ?? internalGempaList;
 
   return (
     <div className="h-full w-full">
@@ -161,29 +211,39 @@ export default function PetaGempa({
           />
           <FitAllGempa gempaList={gempaList} />
           <RippleMarkers gempaList={gempaList} />
-          {gempaList.map((gempa, index) => (
-            <CircleMarker
-              key={index}
-              center={[gempa.lintang, gempa.bujur]}
-              radius={gempa.magnitude * 2}
-              pathOptions={{
-                color: getMarkerColor(gempa.magnitude),
-                fillColor: getMarkerColor(gempa.magnitude),
-                fillOpacity: 0.7,
-              }}
-            >
-              <Popup>
-                <div className="flex flex-col gap-1">
-                  <p>Magnitude: {gempa.magnitude}</p>
-                  <p>Kedalaman: {gempa.kedalaman}</p>
-                  <p>Wilayah: {gempa.wilayah}</p>
-                  <p>
-                    Waktu: {gempa.tanggal}, {gempa.jam}
-                  </p>
-                </div>
-              </Popup>
-            </CircleMarker>
-          ))}
+          {gempaList.map((gempa) => {
+            const key = gempaKey(gempa);
+            const isHovered = hoveredGempaKey === key;
+            return (
+              <CircleMarker
+                key={key}
+                center={[gempa.lintang, gempa.bujur]}
+                radius={isHovered ? gempa.magnitude * 2 * 1.3 : gempa.magnitude * 2}
+                pathOptions={{
+                  color: isHovered ? "#ffffff" : getMarkerColor(gempa.magnitude),
+                  fillColor: getMarkerColor(gempa.magnitude),
+                  fillOpacity: 0.7,
+                  weight: isHovered ? 3 : 1.5,
+                }}
+              >
+                <AdaptiveTooltip lat={gempa.lintang} lng={gempa.bujur}>
+                  <span style={{ fontFamily: "var(--font-ibm-plex-mono)" }}>
+                    M{gempa.magnitude} - Kedalaman {getKedalamanSingkat(gempa.kedalaman)}km
+                  </span>
+                </AdaptiveTooltip>
+                <Popup>
+                  <div className="flex flex-col gap-1">
+                    <p>Magnitude: {gempa.magnitude}</p>
+                    <p>Kedalaman: {gempa.kedalaman}</p>
+                    <p>Wilayah: {gempa.wilayah}</p>
+                    <p>
+                      Waktu: {gempa.tanggal}, {gempa.jam}
+                    </p>
+                  </div>
+                </Popup>
+              </CircleMarker>
+            );
+          })}
         </MapContainer>
       </div>
       <AccessibleMarkers gempaList={gempaList} />

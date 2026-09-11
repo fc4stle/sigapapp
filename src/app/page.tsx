@@ -9,6 +9,8 @@ import PencarianWilayah from "@/components/PencarianWilayah";
 import RingkasanStatus from "@/components/RingkasanStatus";
 import GempaTrendSection from "@/components/GempaTrendSection";
 import TrendRangeProvider from "@/components/TrendRangeProvider";
+import GempaHoverProvider from "@/components/GempaHoverProvider";
+import GempaList from "@/components/GempaList";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -91,40 +93,6 @@ function formatRelativeTime(diffMs: number): string {
 
   const days = Math.round(hours / 24);
   return `Diperbarui ${days} hari yang lalu`;
-}
-
-const BULAN: Record<string, string> = {
-  jan: "Januari",
-  feb: "Februari",
-  mar: "Maret",
-  apr: "April",
-  mei: "Mei",
-  may: "Mei",
-  jun: "Juni",
-  jul: "Juli",
-  ags: "Agustus",
-  aug: "Agustus",
-  sep: "September",
-  okt: "Oktober",
-  oct: "Oktober",
-  nov: "November",
-  des: "Desember",
-  dec: "Desember",
-};
-
-function formatTanggalGempa(tanggal: string): string {
-  const match = tanggal.trim().match(/^(\d{1,2})\s+([A-Za-z]+)\s+\d{4}$/);
-  if (!match) return tanggal;
-  const [, hari, bulanRaw] = match;
-  const bulan = BULAN[bulanRaw.toLowerCase()] ?? bulanRaw;
-  return `${Number(hari)} ${bulan}`;
-}
-
-function formatJamGempa(jam: string): string {
-  const match = jam.trim().match(/^(\d{2}):(\d{2}):\d{2}\s*(.*)$/);
-  if (!match) return jam;
-  const [, jamStr, menit, zona] = match;
-  return zona ? `${jamStr}.${menit} ${zona}` : `${jamStr}.${menit}`;
 }
 
 function formatWaktuUdara(waktu: string): string {
@@ -285,48 +253,21 @@ export default async function Home({
           <section className="flex flex-col gap-4 border-b border-border pb-10">
             <h2 className="text-lg font-semibold">Gempa terkini</h2>
 
-            <div className="h-[500px] w-full overflow-hidden border border-border">
-              <PetaGempaWrapper center={pusatPeta ?? undefined} />
-            </div>
+            <GempaHoverProvider>
+              <div className="h-[500px] w-full overflow-hidden border border-border">
+                <PetaGempaWrapper center={pusatPeta ?? undefined} gempaList={gempaList ?? undefined} />
+              </div>
 
-            {error ? (
-              <p className="text-red-400">
-                Gagal memuat data gempa: {error.message}
-              </p>
-            ) : !gempaList || gempaList.length === 0 ? (
-              <p className="text-muted">Belum ada data gempa</p>
-            ) : (
-              <>
-                {koordinatWilayah && (
-                  <p className="text-xs text-muted">
-                    Diurutkan dari yang terdekat dengan {namaWilayah}
-                  </p>
-                )}
-                <ul className="flex flex-col">
-                  {gempaSorted?.map((gempa: any, index) => (
-                    <li
-                      key={index}
-                      className="flex flex-col gap-1 border-b border-divider py-4 last:border-b-0"
-                    >
-                      <p className="font-mono text-2xl text-accent">
-                        Magnitude {gempa.magnitude}
-                      </p>
-                      <p>{gempa.wilayah}</p>
-                      <p className="text-sm text-muted">
-                        Kedalaman {gempa.kedalaman}, terjadi{" "}
-                        {formatTanggalGempa(gempa.tanggal)} pukul{" "}
-                        {formatJamGempa(gempa.jam)}
-                      </p>
-                      {"_jarak" in gempa && (
-                        <p className="text-xs text-muted">
-                          {Math.round(gempa._jarak)} km dari {namaWilayah}
-                        </p>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
+              {error ? (
+                <p className="text-red-400">
+                  Gagal memuat data gempa: {error.message}
+                </p>
+              ) : !gempaList || gempaList.length === 0 ? (
+                <p className="text-muted">Belum ada data gempa</p>
+              ) : (
+                <GempaList gempaList={gempaSorted ?? []} namaWilayah={namaWilayah} />
+              )}
+            </GempaHoverProvider>
 
             <GempaTrendSection />
           </section>

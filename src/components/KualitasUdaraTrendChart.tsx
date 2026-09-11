@@ -44,6 +44,51 @@ function formatWaktu(iso: string, range: TimeRange): string {
   }).format(date);
 }
 
+function formatWaktuTooltip(iso: string): string {
+  const date = new Date(iso);
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Jakarta",
+  }).format(date);
+}
+
+type TrendDirection = "up" | "down" | "flat";
+
+function getTrend(data: Pm25Point[]): TrendDirection {
+  if (data.length < 2) return "flat";
+  const last = data[data.length - 1].value;
+  const prev = data[data.length - 2].value;
+  if (last > prev) return "up";
+  if (last < prev) return "down";
+  return "flat";
+}
+
+function TrendIndicator({ data }: { data: Pm25Point[] }) {
+  const trend = getTrend(data);
+  if (trend === "flat") return null;
+
+  const color = trend === "up" ? "#ef4444" : "#22c55e";
+  const arrow = trend === "up" ? "▲" : "▼";
+  const label = trend === "up" ? "Meningkat" : "Menurun";
+
+  return (
+    <div
+      className="flex items-center gap-1"
+      style={{ fontSize: "11px", color, fontFamily: "var(--font-ibm-plex-mono)" }}
+      title={label}
+      aria-label={`Tren PM2.5 ${label.toLowerCase()}`}
+    >
+      <span>{arrow}</span>
+      <span>{label}</span>
+    </div>
+  );
+}
+
 export default function KualitasUdaraTrendChart({
   range,
   wilayahTerdekat,
@@ -111,9 +156,12 @@ export default function KualitasUdaraTrendChart({
 
   return (
     <div className="flex flex-col gap-2">
-      <h3 className="text-sm font-semibold">
-        Tren PM2.5 di {wilayahTerdekat}
-      </h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold">
+          Tren PM2.5 di {wilayahTerdekat}
+        </h3>
+        <TrendIndicator data={data} />
+      </div>
       <div
         className="h-[260px] w-full rounded"
         style={{ backgroundColor: "#181510" }}
@@ -157,6 +205,11 @@ export default function KualitasUdaraTrendChart({
               labelStyle={{ color: "#EDE6D8" }}
               itemStyle={{ color: "#D99A3E" }}
               formatter={(value) => [`${value} µg/m³`, "PM2.5"]}
+              labelFormatter={(label, payload) =>
+                payload?.[0]?.payload?.waktu
+                  ? formatWaktuTooltip(payload[0].payload.waktu)
+                  : label
+              }
             />
             <Line
               type="monotone"

@@ -1,10 +1,7 @@
-interface KualitasUdaraItem {
-  location_name: string;
-  value: number;
-  unit: string;
-  parameter: string;
-  sumber: string;
-}
+"use client";
+
+import { udaraKey, useUdaraHover } from "./UdaraHoverProvider";
+import type { KualitasUdaraItem, LocationData } from "@/types/kualitas-udara";
 
 interface Props {
   items: KualitasUdaraItem[];
@@ -27,19 +24,21 @@ function normalizeParameter(param: string): string {
   return p;
 }
 
-interface LocationData {
-  location_name: string;
-  items: KualitasUdaraItem[];
-}
-
 function groupByLocation(items: KualitasUdaraItem[]): LocationData[] {
   const map = new Map<string, LocationData>();
 
   for (const item of items) {
     const existing = map.get(item.location_name) ?? {
       location_name: item.location_name,
+      lintang: 0,
+      bujur: 0,
       items: [],
     };
+
+    if (existing.items.length === 0) {
+      existing.lintang = item.lintang;
+      existing.bujur = item.bujur;
+    }
 
     existing.items.push(item);
     map.set(item.location_name, existing);
@@ -94,8 +93,26 @@ function Gauge({ item }: { item: KualitasUdaraItem }) {
 }
 
 function LocationBlock({ loc }: { loc: LocationData }) {
+  const { hoveredUdaraKey, setHoveredUdaraKey } = useUdaraHover();
+  const isHovered = hoveredUdaraKey === udaraKey(loc);
+
   return (
-    <div className="rounded border border-[#2A2620] p-4" style={{ minWidth: "220px" }}>
+    <div
+      className="rounded border border-[#2A2620] p-4 transition-colors duration-200"
+      style={{
+        minWidth: "220px",
+        backgroundColor: isHovered ? "rgba(237, 230, 216, 0.04)" : "transparent",
+        borderLeftColor: isHovered ? "#D99A3E" : "#2A2620",
+        borderLeftWidth: isHovered ? "3px" : "1px",
+      }}
+      onMouseEnter={() => setHoveredUdaraKey(udaraKey(loc))}
+      onMouseLeave={() => setHoveredUdaraKey(null)}
+      onClick={() =>
+        setHoveredUdaraKey((current) =>
+          current === udaraKey(loc) ? null : udaraKey(loc)
+        )
+      }
+    >
       <p style={{ fontSize: "13px", color: "#EDE6D8", fontWeight: 500 }} className="mb-3">
         {loc.location_name}
       </p>

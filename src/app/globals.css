@@ -129,6 +129,37 @@ body {
   background-size: 24px 24px;
 }
 
+.gempa-marker,
+.udara-marker {
+  transition: r 200ms ease, stroke-width 200ms ease;
+}
+
+.leaflet-tooltip {
+  background: #181510;
+  border: 1px solid #2a2620;
+  color: #ede6d8;
+  border-radius: 4px;
+  box-shadow: none;
+  font-size: 12px;
+  padding: 4px 8px;
+}
+
+.leaflet-tooltip-top:before {
+  border-top-color: #2a2620;
+}
+
+.leaflet-tooltip-bottom:before {
+  border-bottom-color: #2a2620;
+}
+
+.leaflet-tooltip-left:before {
+  border-left-color: #2a2620;
+}
+
+.leaflet-tooltip-right:before {
+  border-right-color: #2a2620;
+}
+
 /* ===== ACCESSIBILITY MODE ===== */
 .a11y-mode {
   --font-size-base: 20px;
